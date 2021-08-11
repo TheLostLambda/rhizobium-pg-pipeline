@@ -1,0 +1,33 @@
+* Analysis Steps
+  1) Clone the [[https://github.com/Mesnage-Org/pgfinder][pgfinder]] repository, stripping out everything but the ~pgfinder~
+     directory and the ~demo_ftrs.py~
+  2) Store the monomer CSV file and MS data in the ~Data/Inputs~ folder
+  3) Update the ~*_filepath~ variables in ~demo_ftrs.py~ – optionally renaming
+     the file
+  4) Adjust the modifications included in the search-space (edit the ~mod_test~
+     variable)
+  5) Add a CSV export to the demo script, replacing ~print(results)~ with
+     ~results.to_csv("Data/Outputs/ms1.csv")~
+  6) Run the PGFinder script    
+  7) Use the Julia REPL and ~Analysis.jl~ to pull out any structures of interest
+     into ~Data/Outputs/selected_structures.csv~
+  8) Separate the dimers in the selected structures with ~=~ instead of
+     ~-~. This is a temporary work-around while I wait for an updated MS1
+     program
+  9) Create the ~Data/Outputs/Graphs/~ directory
+  10) Build the graphs with ~python Scripts/build_graphs.py
+      Data/Outputs/selected_structures.csv Data/Outputs/Graphs/~
+* Results
+** Finding GM-AEJA-GM-AEJ
+#+BEGIN_SRC julia
+julia> summarise(find_structure(df, "GM-AEJA-GM-AEJ"))
+3×4 DataFrame
+ Row │ ionCount  rt       mwMonoisotopic  inferredStructure                 
+     │ Int64     Float64  Float64         String                            
+─────┼──────────────────────────────────────────────────────────────────────
+   1 │        9  16.8543         1793.77  GM-AEJ-GM-AEJA|2,GM-AEJA-GM-AEJ|2
+   2 │       18  14.3089         1793.77  GM-AEJ-GM-AEJA|2,GM-AEJA-GM-AEJ|2
+   3 │      225  14.9381         1793.77  GM-AEJ-GM-AEJA|2,GM-AEJA-GM-AEJ|2
+#+END_SRC
+* Questions
+  1) Has the MS1 program actually been updated to use the = and ~ operators?

@@ -1,0 +1,12 @@
+node,molecule_ID,colour,mods
+G33,GlcNAc,cyan,zero
+M34,MurNAc_alditol,cyan,zero
+A35,A,cyan,zero
+E36,E,cyan,zero
+J37,mDAP,cyan,negH
+A38,A,cyan,Hydroxy
+G39,GlcNAc,cyan,zero
+M40,MurNAc_alditol,cyan,zero
+A41,A,cyan,zero
+E42,E,cyan,zero
+J43,mDAP,cyan,zero
