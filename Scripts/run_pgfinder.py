@@ -1,8 +1,5 @@
-import sys
-sys.path.append("Libraries")
-
-import pgfinder.matching as matching
-import pgfinder.validation as validation
+import pglib.pgfinder.matching as matching
+import pglib.pgfinder.validation as validation
 
 csv_filepath = "Data/Inputs/RL_DB2.csv"
 ftrs_filepath = "Data/Inputs/20210618_RhiLeg_ndslt_TY_1.ftrs"
@@ -18,4 +15,4 @@ validation.validate_enabled_mod_list(mod_test)
 
 results = matching.data_analysis(raw_data, theo_masses, 0.5, mod_test, 10)
 
-results.to_csv("Data/Outputs/ms1.csv")
+results.to_csv("Data/Outputs/MS1.csv")

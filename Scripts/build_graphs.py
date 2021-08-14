@@ -79,8 +79,8 @@ class Monomer:
             self.lat = []
         # Create stem nodes from the remaining, non-empty parts
         self.stem = [[Node.stem(r) for r in p] for p in stem if p]
-        # The terminal stem residue should have a "Hydroxy" modification
-        self.stem[-1][-1].mod = "Hydroxy"
+        # The terminal stem residue should have an "H20" modification
+        self.stem[-1][-1].mod = "H20"
         # The terminal lateral residue should have a "Hydrogen" modification
         if self.lat:
             self.lat[-1].mod = "Hydrogen"
@@ -89,10 +89,8 @@ class Monomer:
         return self.structure
 
     def nodes(self):
-        # Flatten the `self.stem` nested list
-        flat_stem = sum(self.stem, [])
         # Return the chain, stem, and lateral chain nodes + structure name
-        return {self.structure: [*self.chain, *flat_stem, *self.lat]}
+        return {self.structure: [*self.chain, *self.flat_stem(), *self.lat]}
 
     def edges(self):
         # Generates unidirectional bonds for a linear portion of the molecule
@@ -103,9 +101,8 @@ class Monomer:
             return [Edge(nodes[i].id, nodes[i + 1].id) for i in span]
 
         # Flatten the `self.stem` nested list
-        flat_stem = sum(self.stem, [])
         # Generate edges for the linear chain->stem segment
-        edges = bond_segment(self.chain + flat_stem)
+        edges = bond_segment(self.chain + self.flat_stem())
         # Check if a lateral chain is present
         if self.lat:
             # If so, generate a segment using the lateral chain and the stem
@@ -118,6 +115,10 @@ class Monomer:
         # Return the completed edge-list (with the structure name)
         return {self.structure: edges}
 
+    def flat_stem(self):
+        # Flatten the `self.stem` nested list
+        return sum(self.stem, [])
+
 
 class Dimer:
     """
@@ -128,6 +129,7 @@ class Dimer:
     """
 
     sep_re = re.compile(r"([~=])")
+    crosslinks = ["3-3", "3-4"]
 
     def __init__(self, ms1_str):
         # Save the MS1 string for later
@@ -145,21 +147,39 @@ class Dimer:
             self.monomers[0].chain[-1].mod = "negH"
             self.monomers[1].chain[0].mod = "negHOxy"
         else:
-            # Otherwise, split into 3-3 and 3-4 bonded monomers
-            self.monomers = {
-                3: [Monomer(m) for m in monomers],
-                4: [Monomer(m) for m in monomers],
-            }
-            # Both result in a negH mod at position 3 of the first monomer
-            self.monomers[3][0].stem[0][2].mod = "negH"
-            self.monomers[4][0].stem[0][2].mod = "negH"
-            # 3-3 bonds modify position 3 of the second monomer as well
-            self.monomers[3][1].stem[0][2].mod = "negHOxy"
-            # 3-4 bonds remove a mod from the second monomer stem terminus
-            self.monomers[4][1].stem[-1][-1].mod = "zero"
+            # Otherwise, split into crosslinked sets of monomers
+            self.monomers = {type: monos for type in Dimer.crosslinks
+                             if (monos := self.crosslink(type, monomers))}
 
     def __repr__(self):
         return self.structure
+
+    def crosslink(self, type, monomers):
+        # Since the name `3-3` can only exist as a string, we need to check
+        # that the provided string `type` is a valid mode of crosslinking
+        assert type in Dimer.crosslinks
+        # Parse the monomer strings into Monomer objects
+        acceptor, donor = [Monomer(m) for m in monomers]
+        # Get monomer stem lengths
+        a_len, d_len = (len(acceptor.flat_stem()), len(donor.flat_stem()))
+        # Check for illegal crosslinking combinations
+        if type == "3-3" and min(a_len, d_len) < 3:
+            return None
+        if type == "3-4" and (a_len < 3 or d_len < 4):
+            return None
+        # In both types, a hydrogen is lost from residue 3 of the acceptor stem
+        if acceptor.stem[0][2].mod == "H20":
+            acceptor.stem[0][2].mod = "Hydroxy"
+        else:
+            acceptor.stem[0][2].mod = "negH"
+        # 3-3 bonds lose an OH on the donor stem
+        if type == "3-3":
+            donor.stem[0][2].mod = "negHOxy"
+        # 3-4 bonds remove the H20 from the donor terminus
+        if type == "3-4":
+            donor.stem[-1][-1].mod = "zero"
+        # Return the crosslinked monomers
+        return [acceptor, donor]
 
     def nodes(self):
         # If the bond is glycosidic
@@ -167,12 +187,9 @@ class Dimer:
             # Then just splice both monomers' node lists together
             return {self.structure: Dimer.splice(self.monomers, "nodes")}
         else:
-            # Otherwise, return two different node lists for 3-3 and 3-4 bonds
-            key_leader = self.structure + " (3-"
-            return {
-                key_leader + "3)": Dimer.splice(self.monomers[3], "nodes"),
-                key_leader + "4)": Dimer.splice(self.monomers[4], "nodes"),
-            }
+            # Otherwise, return different node lists for the crosslinking types
+            return {f"{self.structure} ({type})": Dimer.splice(monos, "nodes")
+                    for type, monos in self.monomers.items()}
 
     def edges(self):
         # If the bond is glycosidic
@@ -180,29 +197,27 @@ class Dimer:
             # Then splice both monomers' edge lists together
             edges = Dimer.splice(self.monomers, "edges")
             # And add the glycosidic bond
-            mono_a, mono_b = self.monomers
-            edges.append(Edge(mono_a.chain[-1].id, mono_b.chain[0].id, 2))
+            acceptor, donor = self.monomers
+            edges.append(Edge(acceptor.chain[-1].id, donor.chain[0].id, 2))
             # Finally, return the full, named edge-list
             return {self.structure: edges}
         else:
             # Otherwise, create two different edge lists for 3-3 and 3-4 bonds
-            edges_3 = Dimer.splice(self.monomers[3], "edges")
-            edges_4 = Dimer.splice(self.monomers[4], "edges")
-            # Add a 3-3 peptide bond
-            mono_3a, mono_3b = self.monomers[3]
-            bond_33 = Edge(mono_3b.stem[0][2].id, mono_3a.stem[0][2].id, 2)
-            edges_3.append(bond_33)
-            # Add a 3-4 peptide bond
-            mono_4a, mono_4b = self.monomers[4]
-            bond_34 = Edge(mono_4b.stem[0][2].id, mono_4a.stem[-1][-1].id, 2)
-            edges_4.append(bond_34)
+            edges = {type: Dimer.splice(monos, "edges")
+                     for type, monos in self.monomers.items()}
+            # Add a 3-3 peptide bond if possible
+            if "3-3" in edges:
+                acceptor, donor = self.monomers["3-3"]
+                bond = Edge(donor.stem[0][2].id, acceptor.stem[0][2].id, 2)
+                edges["3-3"].append(bond)
+            # Add a 3-4 peptide bond if possible
+            if "3-4" in edges:
+                acceptor, donor = self.monomers["3-4"]
+                bond = Edge(donor.stem[0][2].id, acceptor.stem[-1][-1].id, 2)
+                edges["3-4"].append(bond)
             # Return the named edge lists
-            return {
-                self.structure + " (3-3)": edges_3,
-                # FIXME: 3-4 bonds should only be generated for dimers where
-                # one of the constituent monomers actually has 4 stem residues
-                self.structure + " (3-4)": edges_4,
-            }
+            return {f"{self.structure} ({type})": edges
+                    for type, edges in edges.items()}
 
     @staticmethod
     def splice(monomers, getter):
