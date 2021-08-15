@@ -11,7 +11,7 @@ from multiprocessing import Pool
 
 # Change to relevant graph files and data
 data_file = Path("Data/Inputs/20210618_RhiLeg_ndslt_TY_1.raw.byspec2")
-graph_folder = Path("Data/Outputs/Graphs")
+graph_folder = Path("Data/Outputs/Graphs/Protonless")
 output_dir = Path("Data/Outputs/MS2/")
 
 # Do not change
@@ -66,6 +66,7 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
         molecules, molecule_IDs)
 
     for (mass, graph_ID) in molecule_momo_mass:
+        mass += bio_graph.mods_dict["Hydrogen"]
         print(f"{graph_name}: {mass[0]}")
         scans_to_search = []
         upper_mass_lim = mass[0] + calculate_ppm_tolerance(mass[0], i_ppm)

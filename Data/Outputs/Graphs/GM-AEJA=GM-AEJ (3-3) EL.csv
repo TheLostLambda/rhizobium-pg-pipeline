@@ -1,0 +1,11 @@
+node1,node2,chain_colour_ID,linktype
+G28,M29,violet,2
+M29,A30,violet,2
+A30,E31,violet,2
+E31,J32,violet,2
+J32,A33,violet,2
+G34,M35,violet,2
+M35,A36,violet,2
+A36,E37,violet,2
+E37,J38,violet,2
+J38,J32,violet,2
