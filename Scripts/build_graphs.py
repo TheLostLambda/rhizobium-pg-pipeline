@@ -165,7 +165,7 @@ class Dimer:
         # Check for illegal crosslinking combinations
         if type == "3-3" and min(a_len, d_len) < 3:
             return None
-        if type == "3-4" and (a_len < 3 or d_len < 4):
+        if type == "3-4" and (a_len < 3 or d_len != 4):
             return None
         # In both types, a hydrogen is lost from residue 3 of the acceptor stem
         if acceptor.stem[0][2].mod == "H20":
@@ -174,10 +174,13 @@ class Dimer:
             acceptor.stem[0][2].mod = "negH"
         # 3-3 bonds lose an OH on the donor stem
         if type == "3-3":
-            donor.stem[0][2].mod = "negHOxy"
-        # 3-4 bonds remove the H20 from the donor terminus
+            if donor.stem[0][2].mod == "H20":
+                donor.stem[0][2].mod = "Hydrogen"
+            else:
+                donor.stem[0][2].mod = "negHOxy"
+        # 3-4 bonds remove a hydroxy from the donor terminus
         if type == "3-4":
-            donor.stem[-1][-1].mod = "zero"
+            donor.stem[-1][-1].mod = "Hydrogen"
         # Return the crosslinked monomers
         return [acceptor, donor]
 

@@ -1,4 +1,6 @@
 import numpy as np
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 from keras.models import load_model
 import os.path
 # from matplotlib import pyplot as plt
@@ -29,7 +31,6 @@ class Charge_Determinator:
 
     def __init__(self, neural_network_model):
         self.model = load_model(neural_network_model)
-        self.model.summary()
         self.successive_comb_filters = self.build_successive_comb_filter()
 
     def determine_charge(self, scan_slice):
@@ -65,7 +66,7 @@ class Charge_Determinator:
 
             succesive_comb_filters.append(np.array(t_successive_combfilter))
 
-        return np.array(succesive_comb_filters)
+        return np.array(succesive_comb_filters, dtype=object)
 
     def charge_preprocessor(self
                             , scan_array: np.array
@@ -98,7 +99,6 @@ class Monoisotope_Determinator:
                 print("model not found")
             else:
                 model = load_model(self.neural_network_models_path + ('mono_charge_%s.nn' % charge))
-                model.summary()
                 self.monoisotope_models.append(model)
 
 
@@ -151,7 +151,7 @@ class Monoisotope_Determinator:
 
             succesive_comb_filters.append(tt_successive_combfilter)
 
-        return np.array(succesive_comb_filters)
+        return np.array(succesive_comb_filters, dtype=object)
 
 
     def mono_preprocessor(self

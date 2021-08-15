@@ -7,7 +7,7 @@ from pglib.ms2_tool import Helper_Funcs as hfunc
 from pglib.ms2_tool import Bio_Graph as BG
 import pandas as pd
 from pathlib import Path
-
+from multiprocessing import Pool
 
 # Change to relevant graph files and data
 data_file = Path("Data/Inputs/20210618_RhiLeg_ndslt_TY_1.raw.byspec2")
@@ -17,6 +17,7 @@ output_dir = Path("Data/Outputs/MS2/")
 # Do not change
 mass_table = "Data/Constants/masses_table.csv"
 mod_table = "Data/Constants/mods_table.csv"
+selected_ions = ['y', 'b', 'i']
 
 
 def calculate_ppm_tolerance(mass, ppm_tol):
@@ -27,7 +28,7 @@ def ppm_error(obs_mass, theo_mass):
     return (1-(dec.Decimal(obs_mass)/theo_mass))*1000000
 
 
-def autosearch(selected_ions, graph_name, user_set_cuts=3, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'):
+def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'):
     nl = Path(graph_folder) / (graph_name + " NL.csv")
     el = Path(graph_folder) / (graph_name + " EL.csv")
     hf = hfunc.Helper_Funcs(nl, el)
@@ -65,7 +66,7 @@ def autosearch(selected_ions, graph_name, user_set_cuts=3, user_set_charge=2, in
         molecules, molecule_IDs)
 
     for (mass, graph_ID) in molecule_momo_mass:
-        print(mass[0])
+        print(f"{graph_name}: {mass[0]}")
         scans_to_search = []
         upper_mass_lim = mass[0] + calculate_ppm_tolerance(mass[0], i_ppm)
         lower_mass_lim = mass[0] - calculate_ppm_tolerance(mass[0], i_ppm)
@@ -96,7 +97,7 @@ def autosearch(selected_ions, graph_name, user_set_cuts=3, user_set_charge=2, in
         os.mkdir(output_path)
 
         graph = nx.Graph(molecules[graph_ID])
-        fragments = bio_graph.fragmentation(graph, cut_limit=user_set_cuts)
+        fragments = bio_graph.fragmentation(graph)
         total_theo_frags = len(fragments)
         n_frag, c_frag, i_frag = bio_graph.sort_fragments(fragments)
         nlist = bio_graph.monoisotopic_mass_calculator(fragments, n_frag)
@@ -123,7 +124,7 @@ def autosearch(selected_ions, graph_name, user_set_cuts=3, user_set_charge=2, in
                             ppm_diff = ppm_error(obs_mz, ion)
                             charge = idx + 1
                             fragment = nx.Graph(fragments[graph_key])
-                            frag = tuple(fragment.nodes)
+                            frag = tuple(sorted(fragment.nodes))
                             all_obs_frags[frag] = all_obs_frags.get(
                                 frag, 0) + 1
                             fragment_nodes = str(fragment.nodes)
@@ -139,7 +140,12 @@ def autosearch(selected_ions, graph_name, user_set_cuts=3, user_set_charge=2, in
             matched_output_df.to_csv(
                 output_path / f'{score}% ({scan_number}).csv')
             matched_output.clear()
-        pd.DataFrame(all_obs_frags, columns=['Fragment', 'Count']).to_csv(output_path / f'Observed Fragments ({len(all_obs_frags)} of {total_theo_frags})')
+        df = pd.DataFrame(all_obs_frags.items(), columns=['Fragment', 'Count'])
+        df.to_csv(output_path / f'Observed Fragments ({len(all_obs_frags)} of {total_theo_frags})', index=False)
 
 
-autosearch(['y', 'b', 'i'], "GM-AEJ=GM-AEJA (3-3)")
+if __name__ == "__main__":
+    with Pool(16) as p:
+        structures = [nf.name.removesuffix(" NL.csv")
+                      for nf in graph_folder.glob("* NL.csv")]
+        p.map(autosearch, structures)
