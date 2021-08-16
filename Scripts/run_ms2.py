@@ -99,7 +99,8 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
 
         graph = nx.Graph(molecules[graph_ID])
         fragments = bio_graph.fragmentation(graph)
-        total_theo_frags = len(fragments)
+        # -1 for the full, unfragmented structure
+        total_theo_frags = len(fragments) - 1
         n_frag, c_frag, i_frag = bio_graph.sort_fragments(fragments)
         nlist = bio_graph.monoisotopic_mass_calculator(fragments, n_frag)
         clist = bio_graph.monoisotopic_mass_calculator(fragments, c_frag)
@@ -111,6 +112,7 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
 
         for scan_number in scans_to_search:
             scan = byspec_reader.get_scan_by_scan_number(scan_number)
+            frags_in_scan = set()
             for obs_mz, count in scan:
                 for row in frag_ions_df.values:
                     ions = row[0]
@@ -125,14 +127,15 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
                             ppm_diff = ppm_error(obs_mz, ion)
                             charge = idx + 1
                             fragment = nx.Graph(fragments[graph_key])
-                            frag = tuple(sorted(fragment.nodes))
-                            all_obs_frags[frag] = all_obs_frags.get(
-                                frag, 0) + 1
+                            frags_in_scan.add(tuple(sorted(fragment.nodes)))
                             fragment_nodes = str(fragment.nodes)
                             frag_structure.append(fragment_nodes)
                             matched_output.append(
                                 (obs_mz, ion, charge, count, ppm_diff, ion_type, frag_structure))
                             frag_structure = []
+
+            for frag in frags_in_scan:
+                all_obs_frags[frag] = all_obs_frags.get(frag, 0) + 1
 
             matched_output_df = pd.DataFrame(matched_output, columns=[
                                              'Observered Ion', 'Theoretical Ion', 'Charge', 'count', 'PPM Error', 'Ion Type', 'Structure'])
@@ -142,7 +145,8 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
                 output_path / f'{score}% ({scan_number}).csv')
             matched_output.clear()
         df = pd.DataFrame(all_obs_frags.items(), columns=['Fragment', 'Count'])
-        df.to_csv(output_path / f'Observed Fragments ({len(all_obs_frags)} of {total_theo_frags})', index=False)
+        df.to_csv(
+            output_path / f'Observed Fragments ({len(all_obs_frags)} of {total_theo_frags})', index=False)
 
 
 if __name__ == "__main__":
