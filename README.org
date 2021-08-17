@@ -55,6 +55,32 @@ julia> summarise(find_structure(ms, "GM-AEJA"))
 #+BEGIN_SRC python
 {('J4',): 88, ('A2', 'E3'): 40, ('G0',): 88, ('A2', 'E3', 'J4', 'A5'): 137, ('M1',): 88, ('E3', 'J4'): 88, ('A2', 'M1'): 88, ('M1', 'A2'): 88, ('A2', 'E3', 'J4'): 88, ('M1', 'A2', 'E3'): 52, ('M1', 'A2', 'E3', 'J4'): 49, ('G0', 'M1', 'A2', 'E3'): 10, ('M1', 'A2', 'E3', 'J4', 'A5'): 85, ('E3', 'J4', 'A5'): 80, ('G0', 'M1', 'A2'): 3, ('A5', 'J4'): 78, ('J4', 'A5'): 78, ('G0', 'M1', 'A2', 'E3', 'J4'): 6, ('G0', 'M1'): 20, ('E3',): 5}
 #+END_SRC
+*** Summary
+#+BEGIN_SRC julia
+julia> summarise_ms2("Data/Outputs/MS2/GM-AEJA (Protonless)/")
+Matched Scans: 88
+Average Percent Observed: 62.84%
+Total Fragments Observed: 19 of 20
+Coverage Percent: 61.7%
+
+julia> summarise_ms2("Data/Outputs/MS2/GM-AEJA/")
+Matched Scans: 88
+Average Percent Observed: 62.10%
+Total Fragments Observed: 18 of 20
+Coverage Percent: 58.18%
+
+julia> summarise_ms2("Data/Outputs/MS2/GM-AEJA (GlcNAc + H)")
+Matched Scans: 88
+Average Percent Observed: 57.10%
+Total Fragments Observed: 18 of 20
+Coverage Percent: 56.14%
+
+julia> summarise_ms2("Data/Outputs/MS2/GM-AEJA (mDAP + H)")
+Matched Scans: 88
+Average Percent Observed: 55.11%
+Total Fragments Observed: 18 of 20
+Coverage Percent: 51.48%
+#+END_SRC
 * Questions
   1) Has the MS1 program actually been updated to use the = and ~ operators?
   2) Where are the RAW files for XCalibur?

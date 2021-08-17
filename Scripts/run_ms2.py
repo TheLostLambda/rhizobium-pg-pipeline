@@ -11,7 +11,7 @@ from multiprocessing import Pool
 
 # Change to relevant graph files and data
 data_file = Path("Data/Inputs/20210618_RhiLeg_ndslt_TY_1.raw.byspec2")
-graph_folder = Path("Data/Outputs/Graphs/Protonless")
+graph_folder = Path("Data/Outputs/Graphs/")
 output_dir = Path("Data/Outputs/MS2/")
 
 # Do not change
@@ -66,7 +66,7 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
         molecules, molecule_IDs)
 
     for (mass, graph_ID) in molecule_momo_mass:
-        mass += bio_graph.mods_dict["Hydrogen"]
+        # mass += bio_graph.mods_dict["Hydrogen"]
         print(f"{graph_name}: {mass[0]}")
         scans_to_search = []
         upper_mass_lim = mass[0] + calculate_ppm_tolerance(mass[0], i_ppm)
@@ -99,8 +99,7 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
 
         graph = nx.Graph(molecules[graph_ID])
         fragments = bio_graph.fragmentation(graph)
-        # -1 for the full, unfragmented structure
-        total_theo_frags = len(fragments) - 1
+        total_theo_frags = len(fragments)
         n_frag, c_frag, i_frag = bio_graph.sort_fragments(fragments)
         nlist = bio_graph.monoisotopic_mass_calculator(fragments, n_frag)
         clist = bio_graph.monoisotopic_mass_calculator(fragments, c_frag)
@@ -108,7 +107,7 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
         frag_ions_df = bio_graph.generate_mass_to_charge_masses(
             nlist, clist, ilist, selected_ions, user_set_charge)
 
-        all_obs_frags = {}
+        all_obs_frags = {tuple(sorted(f.nodes)): 0 for f in fragments.values()}
 
         for scan_number in scans_to_search:
             scan = byspec_reader.get_scan_by_scan_number(scan_number)
@@ -135,22 +134,22 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
                             frag_structure = []
 
             for frag in frags_in_scan:
-                all_obs_frags[frag] = all_obs_frags.get(frag, 0) + 1
+                all_obs_frags[frag] += 1
 
             matched_output_df = pd.DataFrame(matched_output, columns=[
                                              'Observered Ion', 'Theoretical Ion', 'Charge', 'count', 'PPM Error', 'Ion Type', 'Structure'])
             matched_num = len(matched_output_df)
             score = round(((matched_num/total_theo_frags)*100))
             matched_output_df.to_csv(
-                output_path / f'{score}% ({scan_number}).csv')
+                output_path / f'{scan_number} ({score}%).csv')
             matched_output.clear()
         df = pd.DataFrame(all_obs_frags.items(), columns=['Fragment', 'Count'])
         df.to_csv(
-            output_path / f'Observed Fragments ({len(all_obs_frags)} of {total_theo_frags})', index=False)
+            output_path / f'Observed Fragments ({len([c for c in all_obs_frags.values() if c > 0])} of {total_theo_frags})', index=False)
 
 
 if __name__ == "__main__":
-    with Pool(16) as p:
+    with Pool() as p:
         structures = [nf.name.removesuffix(" NL.csv")
                       for nf in graph_folder.glob("* NL.csv")]
         p.map(autosearch, structures)

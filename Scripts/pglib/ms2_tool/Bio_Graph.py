@@ -215,22 +215,30 @@ class Bio_Graph:
         return graph
 
     # Generates multi cut fragments from parent graph
-    def fragmentation(self, molecule, seen=set()):
-        # Add the current graph as a fragment to the dictionary
-        all_fragments = {self.graph_hash(molecule): molecule}
-        # If the molecule contains 1 or fewer nodes, return the current graph
-        if len(molecule.nodes) <= 1:
-            return all_fragments
-        # Otherwise, recursively fragment the molecule
-        else:
-            # Generate a dictionary of single-cut products
-            cut_products = {id: graph for id, graph in self.bond_cutter(molecule).items() if id not in seen}
-            seen |= cut_products.keys()
-            # Loop through the cut products, fragmenting them and adding the
-            # generated products to `all_fragments`
-            for graph in cut_products.values():
-                all_fragments = self.fragmentation(nx.Graph(graph), seen) | all_fragments
-            return all_fragments
+    def fragmentation(self, molecule):
+        # Define a local helper function for recursion
+        def recurse(molecule, seen=set()):
+            # Add the current graph as a fragment to the dictionary
+            all_fragments = {self.graph_hash(molecule): molecule}
+            # If the molecule contains 1 or fewer nodes, return the current graph
+            if len(molecule.nodes) <= 1:
+                return all_fragments
+            # Otherwise, recursively fragment the molecule
+            else:
+                # Generate a dictionary of single-cut products
+                cut_products = {id: graph for id, graph in self.bond_cutter(molecule).items() if id not in seen}
+                seen |= cut_products.keys()
+                # Loop through the cut products, fragmenting them and adding the
+                # generated products to `all_fragments`
+                for graph in cut_products.values():
+                    all_fragments = recurse(nx.Graph(graph), seen) | all_fragments
+                return all_fragments
+
+        # Recursively compute all fragments
+        result = recurse(molecule)
+        # Remove the unfragmented parent molecule from the results
+        del result[self.graph_hash(molecule)]
+        return result
 
     # Sorts fragments into N/C terminal sides or internal fragment
     def sort_fragments(self, fragment_graphs):

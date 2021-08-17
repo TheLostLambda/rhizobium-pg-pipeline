@@ -1,5 +1,6 @@
 using CSV
 using DataFrames
+using Statistics
 
 "Read an MS1 file into a DataFrame – dropping unresolved structures"
 load_ms1(csvfile) = dropmissing(DataFrame(CSV.File(csvfile)), :inferredStructure)
@@ -31,11 +32,19 @@ function load_ms2_scores(ms2dir)
   [parse(Int, split(f, '%')[1]) for f in frag_files]
 end
 
-"Load found MS2 fragments from the output directory"
-function load_ms2_fragments(ms2dir)
-[DataFrame(CSV.File(f))[:, :Structure] for f in readdir(ms2dir, join=true) if '%' in f] |>
-    Iterators.flatten |>
-    Set
+"Summarise MS2 runs using several key statistics"
+function summarise_ms2(ms2dir)
+  ms2_scores = load_ms2_scores(ms2dir)
+  summary_file = [f for f in readdir(ms2dir, join=true) if occursin("Observed", f)][1]
+  summary_match = match(r"\d+ of (\d+)", summary_file)
+  summary_data = DataFrame(CSV.File(summary_file))[:, :Count]
+  coverage = sum(summary_data) / (parse(Int, summary_match.captures[1]) * length(ms2_scores))
+  print("""
+  Matched Scans: $(length(ms2_scores))
+  Average Percent Observed: $(round(mean(ms2_scores), digits=2))%
+  Total Fragments Observed: $(summary_match.match)
+  Coverage Percent: $(round(coverage * 100, digits=2))%
+  """)
 end
 
 "Performs a simple analysis on the data"
