@@ -108,9 +108,11 @@ Coverage Percent: 51.48%
    - In Byspec2 file, Spectra table has Parent Scan Number
    - In MS2 output, sort scan numbers in to folders that are named according to
      the parent scan number
-** TODO Improve Multimer Builder
+** DONE Improve Multimer Builder
+   CLOSED: [2021-08-30 Mon 21:34]
    - Read data from file(s)
    - Make sure that the new === and =~= terminology is working
+   - *CHECK THAT GLYCO ACTUALLY WORKS!*
 ** TODO Fix the generation of 3-4 bonded graphs
    - It looked like I might have a but where 3-3 bonding is present in 3-4 files?
 ** TODO Fix MS2 Ion Generation

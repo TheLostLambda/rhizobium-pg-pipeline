@@ -6,7 +6,7 @@ using Statistics
 load_ms1(csvfile) = dropmissing(DataFrame(CSV.File(csvfile)), :inferredStructure)
 
 "Split a String listing of structures in a Vector of Strings"
-split_structures(st) = [String(m.captures[1]) for m in eachmatch(r"([A-Z-]+)", st)] 
+split_structures(st) = [String(m.captures[1]) for m in eachmatch(r"([A-Z-=~]+)", st)]
 
 "Filter a DataFrame for rows containing a particular structure"
 function find_structure(ms1data, structure)
@@ -50,6 +50,6 @@ end
 "Performs a simple analysis on the data"
 function pipeline()
   ms = load_ms1("Data/Outputs/MS1.csv")
-  selected = find_structure(ms, "GM-AEJA-GM-AEJ") |> all_structures
+  selected = find_structure(ms, "GM-AEJA=GM-AEJ") |> all_structures
   write_csv("Data/Outputs/selected_structures.csv", selected)
 end

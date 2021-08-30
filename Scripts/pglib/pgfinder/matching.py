@@ -61,40 +61,33 @@ def multimer_builder(theo_list, multimer_type: int = 0):
                 donor = name
                 donor_mw = mass
                 theo_mw.append(Decimal(mw)+donor_mw+Decimal('-18.0106'))
-                theo_struct.append(acceptor+'-'+donor+'|'+str(mult_num))
+                theo_struct.append(acceptor+donor+'|'+str(mult_num))
 
 # Calls builder subfunction with different arguements based on multimer type selected
 
     # Calculates multimers based on peptide bond through side chain
     if multimer_type == 0:
-        builder("GM-AEJA", Decimal('941.4075'), 2)
-        builder("GM-AEJ", Decimal('870.3704'), 2)
-        builder("GM-AEJ-GM-AEJ", Decimal('1722.7302'), 3)
-        builder("GM-AEJ-GM-AEJA", Decimal('1793.7673'), 3)
-        builder("GM-AEJA-GM-AEJA", Decimal('1864.8044'), 3)
+        builder("=GM-AEJA", Decimal('941.4075'), 2)
+        builder("=GM-AEJ", Decimal('870.3704'), 2)
+        builder("=GM-AEJ=GM-AEJ", Decimal('1722.7302'), 3)
+        builder("=GM-AEJ=GM-AEJA", Decimal('1793.7673'), 3)
+        builder("=GM-AEJA=GM-AEJA", Decimal('1864.8044'), 3)
 
-    # Calculates multimers based on glycosidic bond through dissachrides & peptide bonds through side chains
+    # Calculates multimers based on glycosidic bond through dissachrides
     elif multimer_type == 1:
-        builder("GM-AE", Decimal('698.2858'), 2)
-        builder("GM-AEJA", Decimal('941.4075'), 2)
-        builder("GM-AEJ", Decimal('870.3704'), 2)
-        builder("GM-AEJ-GM-AEJ", Decimal('1722.7302'), 3)
-        builder("GM-AEJ-GM-AEJA", Decimal('1793.7673'), 3)
-        builder("GM-AEJA-GM-AEJA", Decimal('1864.8044'), 3)
-
-        builder("GM-AEJA_(Glyco)",  Decimal('939.3919'), 2)
-        builder("GM-AEJ_(Glyco)", Decimal('868.3548'), 2)
-        builder("GM-AEJ-GM-AEJ_(Glyco)",  Decimal('1720.7146'), 3)
-        builder("GM-AEJ-GM-AEJA_(Glyco)",  Decimal('1791.7517'), 3)
-        builder("GM-AEJA-GM-AEJA_(Glyco)",  Decimal('1862.7888'), 3)
+        builder("~GM-AEJA",  Decimal('939.3919'), 2)
+        builder("~GM-AEJ", Decimal('868.3548'), 2)
+        builder("~GM-AEJ~GM-AEJ",  Decimal('1720.7146'), 3)
+        builder("~GM-AEJ~GM-AEJA",  Decimal('1791.7517'), 3)
+        builder("~GM-AEJA~GM-AEJA",  Decimal('1862.7888'), 3)
 
     # Calculates multimers based on Lactyl peptides (peptide bond via side chain but no dissachrides on muropeptides)
     elif multimer_type == 2:
-        builder("Lac-AEJA",  Decimal('533.2333'), 2)
-        builder("Lac-AEJ",  Decimal('462.1962'), 2)
-        builder("Lac-AEJ-Lac-AEJ",  Decimal('906.3818'), 3)
-        builder("Lac-AEJ-Lac-AEJA",  Decimal('977.4189'), 3)
-        builder("Lac-AEJA-Lac-AEJA", Decimal('1048.4560'), 3)
+        builder("-Lac-AEJA",  Decimal('533.2333'), 2)
+        builder("-Lac-AEJ",  Decimal('462.1962'), 2)
+        builder("-Lac-AEJ-Lac-AEJ",  Decimal('906.3818'), 3)
+        builder("-Lac-AEJ-Lac-AEJA",  Decimal('977.4189'), 3)
+        builder("-Lac-AEJA-Lac-AEJA", Decimal('1048.4560'), 3)
 
     # converts lists to dataframe
     multimer_df = pd.DataFrame(list(zip(theo_mw, theo_struct)), columns=['Monoisotopicmass', 'Structure'])

@@ -1,6 +1,0 @@
-node1,node2,chain_colour_ID,linktype
-G0,M1,violet,2
-M1,A2,violet,2
-A2,E3,violet,2
-E3,J4,violet,2
-J4,A5,violet,2
