@@ -96,3 +96,26 @@ Coverage Percent: 51.48%
     the GlcNAc" result would have a 12.43 and the "On the Terminal (H_{2}O)" would
     be 14.31. This is like an average "cover depth" – the average number of
     times each theoretical fragment is observed
+* Tasks
+** TODO MS1 Output Needs Scan Number Outputs
+   - Pull out XIC start / end
+   - FTRS is SQL, match the RT of ChargeClusters with the xicStart and end from
+     Features
+   - In the RT range, filter for matched monoisotopic masses
+   - Add a function after the ~ftrs_reader~ file in matching.py to do the
+     sorting ~get_scan_ftrs~
+   - Just need a start and end scan number (a window)
+   - In Byspec2 file, Spectra table has Parent Scan Number
+   - In MS2 output, sort scan numbers in to folders that are named according to
+     the parent scan number
+** TODO Improve Multimer Builder
+   - Read data from file(s)
+   - Make sure that the new === and =~= terminology is working
+** TODO Fix the generation of 3-4 bonded graphs
+   - It looked like I might have a but where 3-3 bonding is present in 3-4 files?
+** TODO Fix MS2 Ion Generation
+   - Glycan fragmentation results in oxonium ion formation, so I don't need to
+     add the mass of a proton when a terminal contains a glycan fragment
+   - I need to sort fragments based on whether they end in a peptide or glycan?
+** TODO Improve MS2 Scanning Performance
+   - Parallelise searching for parent ions using Pool.map
