@@ -84,7 +84,9 @@ class Monomer:
         # The terminal stem residue should have a "Hydroxyl" modification
         self.stem[-1][-1].mod = "Hydroxy"
         # The terminal lateral residue should have a "Hydrogen" modification
+        # and the branch-point should have a "negH"
         if self.lat:
+            self.stem[0][2].mod = "negH"
             self.lat[-1].mod = "Hydrogen"
 
     def __repr__(self):

@@ -12,6 +12,8 @@ import copy as cp
 
 class Bio_Graph:
 
+    sugars = ['GlcNAc', 'GlcN', 'MurNAc', 'MurN', 'MurNAc_alditol']
+
     def __init__(self, nodes_from_file: pd.DataFrame, edges_from_file: pd.DataFrame, mass_dict: dict, mods_dict: dict):
         self.nodes_from_file = nodes_from_file
         self.edges_from_file = edges_from_file
@@ -50,6 +52,9 @@ class Bio_Graph:
         master_graph.add_nodes_from(node_attributes)
         nodeskeys = dict.fromkeys(master_graph, [])
         nx.set_node_attributes(master_graph, nodeskeys, "flag")
+        for id in master_graph.nodes:
+            mod = self.mods_dict[master_graph.nodes[id]["mods"]]
+            master_graph.nodes[id]["mods"] = mod
         # generate edge order list (used for fragmentation methods)
         self.construct_edge_order()
 
@@ -119,8 +124,6 @@ class Bio_Graph:
 
         # List of node mass values
         node_residue_mass = []
-        # List of mod mass values
-        mod_mass = []
 
         # List of graph masses (will contain duplicates)
         graph_masses = []
@@ -137,19 +140,15 @@ class Bio_Graph:
             # Generate list of node masses
             for ID in node_molecule_ID:
                 node_residue_mass.append(self.mass_dict[ID])
-            # Generate list of node mod_masses
-            for mod_key in node_mods:
-                mod_mass.append(self.mods_dict[mod_key])
 
             nodes_total = sum(np.array(node_residue_mass))
-            mods_total = sum(np.array(mod_mass))
+            mods_total = sum(np.array(node_mods))
             # Sum node and mod mass totals to generate neutral monoisotopic mass of f_graph
             total_mono_mass = nodes_total + mods_total
 
             graph_masses.append((total_mono_mass, f_graph))
 
             node_residue_mass.clear()
-            mod_mass.clear()
 
         return graph_masses
 
@@ -162,6 +161,7 @@ class Bio_Graph:
             # Generate copy of graph to apply cut operation to (prevents intact graph object used in line above from changing during execution)
             intact_copy = cp.deepcopy(intact_graph)
 
+            # N1 is always N-terminal node
             (n1, n2) = self.get_ordered_edge(u, v)
 
             intact_copy = self.set_fragmentation_flags(intact_copy, n1, n2)
@@ -169,6 +169,15 @@ class Bio_Graph:
             # Remove edge (break bond)
             intact_copy.remove_edge(n1, n2)
 
+            node1 = intact_copy.nodes[n1]
+            node2 = intact_copy.nodes[n2]
+
+            node1["mods"] += self.mods_dict["negProton"]
+            node2["mods"] += self.mods_dict["Hydrogen"]
+
+            # FIXME: Check the residues being separated and update any modifications. e.g
+            # add the Hydrogen to a MurNAc terminal or add a Hydrogen to B ions, N-terminal
+            # residues)
             # Generates subgraphs based on the intact_copy graph
             fragments = [cp.deepcopy(intact_copy.subgraph(comps))
                          for comps in nx.connected_components(intact_copy)]
@@ -273,58 +282,38 @@ class Bio_Graph:
 
     # Generate m/z masses
     def generate_mass_to_charge_masses(self, fgraphs, n_terminal_fragments: list, c_terminal_fragments: list,
-                                            internal_fragments: list, enabled_ions: list, charge_limit: int = 1):
+                                       internal_fragments: list, enabled_ions: list, charge_limit: int = 1):
         proton_mass = dec.Decimal('1.0073')
         mzlist_graph = []
         b_mz = []
         y_mz = []
         i_mz = []
 
-        N_term_neutral = dec.Decimal('1.0078')
-        hydrogen_mass = dec.Decimal('1.0078')
         proton_mass = dec.Decimal('1.0073')
 
+        # FIXME: This is obviously a bit repetitive, but I'm scared to refactor
+        # critical code when I'm half-asleep. In reality, I should write tests.
         if 'y' in enabled_ions:
             for (mono_mass, graph) in c_terminal_fragments:
-                g = nx.Graph(fgraphs[graph])
-                nodes = g.nodes(data='ID')
-                print(nodes, 'GlcNac' or 'MurNAc' in nodes)
                 for charge_state in range(1, charge_limit + 1):
-                    y_neutral = mono_mass[0] + hydrogen_mass
                     y_mz.append(
-                        (y_neutral + (proton_mass * charge_state)) / charge_state)
+                        (mono_mass + (proton_mass * charge_state)) / charge_state)
                 mzlist_graph.append((y_mz, "y_ion", graph))
                 y_mz = []
 
         if 'b' in enabled_ions:
             for (mono_mass, graph) in n_terminal_fragments:
-                g = nx.Graph(fgraphs[graph])
-                nodes = g.nodes(data='ID')
-                print(nodes, 'GlcNac' or 'MurNAc' in nodes)
-                if 'GlcNac' or 'MurNAc' in nodes:
-                    for charge_state in range(1, charge_limit + 1):
-                        b_neutral = mono_mass[0] - proton_mass
-                        b_mz.append(
-                            (b_neutral + (proton_mass * charge_state)) / charge_state)
-                    mzlist_graph.append((b_mz, "b_ion", graph))
-                    b_mz = []
-                else:
-                    for charge_state in range(1, charge_limit + 1):
-                        b_neutral = mono_mass[0] + N_term_neutral - proton_mass
-                        b_mz.append(
-                            (b_neutral + (proton_mass * charge_state)) / charge_state)
-                    mzlist_graph.append((b_mz, "b_ion", graph))
-                    b_mz = []
+                for charge_state in range(1, charge_limit + 1):
+                    b_mz.append(
+                        (mono_mass + (proton_mass * charge_state)) / charge_state)
+                mzlist_graph.append((b_mz, "b_ion", graph))
+                b_mz = []
 
         if 'i' in enabled_ions:
             for (mono_mass, graph) in internal_fragments:
-                g = nx.Graph(fgraphs[graph])
-                nodes = g.nodes(data='ID')
-                print(nodes, 'GlcNac' or 'MurNAc' in nodes)
                 for charge_state in range(1, charge_limit + 1):
-                    i_neutral = mono_mass[0]
                     i_mz.append(
-                        (i_neutral + (proton_mass * charge_state)) / charge_state)
+                        (mono_mass + (proton_mass * charge_state)) / charge_state)
                 mzlist_graph.append((i_mz, "i_ion", graph))
                 i_mz = []
 

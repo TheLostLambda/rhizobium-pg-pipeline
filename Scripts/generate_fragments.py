@@ -38,6 +38,5 @@ if __name__ == "__main__":
                 ff = csv.writer(f)
                 ff.writerow(["Type", "Mass", "Parts"])
                 for id, type, frag in tagged_frags:
-                    mass = bg.monoisotopic_mass_calculator(fragments, [id])[
-                        0][0][0]
+                    mass = bg.monoisotopic_mass_calculator(fragments, [id])[0][0]
                     ff.writerow([type, mass, frag])

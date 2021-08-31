@@ -1,6 +1,7 @@
 import pandas as pd
 from decimal import *
 
+
 class Helper_Funcs:
 
     def __init__(self, nodes_filepath: str, edges_filepath: str):
@@ -27,7 +28,5 @@ class Helper_Funcs:
         # Tranpose dataframe so index value is header for each column (to_dict takes column headers as key value)
         transposed_df = dict_df.transpose()
         # Create dictionary
-        output_dict = transposed_df.to_dict('list')
+        output_dict = {k: v["Value"] for k, v in transposed_df.to_dict().items()}
         return output_dict
-
-
