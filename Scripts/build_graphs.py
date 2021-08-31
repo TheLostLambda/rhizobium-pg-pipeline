@@ -68,6 +68,8 @@ class Monomer:
         chain, stem = ms1_str.split("-")
         # Create chain nodes
         self.chain = [Node.chain(r) for r in chain]
+        # The first chain residue should have a "Hydrogen" modification
+        self.chain[0].mod = "Hydrogen"
         # Split the stem on the lateral chain (if present)
         stem = Monomer.lat_re.split(stem)
         # Was a lateral chain present?
@@ -79,8 +81,8 @@ class Monomer:
             self.lat = []
         # Create stem nodes from the remaining, non-empty parts
         self.stem = [[Node.stem(r) for r in p] for p in stem if p]
-        # The terminal stem residue should have an "H20" modification
-        self.stem[-1][-1].mod = "H20"
+        # The terminal stem residue should have a "Hydroxyl" modification
+        self.stem[-1][-1].mod = "Hydroxy"
         # The terminal lateral residue should have a "Hydrogen" modification
         if self.lat:
             self.lat[-1].mod = "Hydrogen"
@@ -168,14 +170,14 @@ class Dimer:
         if type == "3-4" and (a_len < 3 or d_len != 4):
             return None
         # In both types, a hydrogen is lost from residue 3 of the acceptor stem
-        if acceptor.stem[0][2].mod == "H20":
-            acceptor.stem[0][2].mod = "Hydroxy"
+        if acceptor.stem[0][2].mod == "Hydroxy":
+            acceptor.stem[0][2].mod = "Oxygen"
         else:
             acceptor.stem[0][2].mod = "negH"
         # 3-3 bonds lose an OH on the donor stem
         if type == "3-3":
-            if donor.stem[0][2].mod == "H20":
-                donor.stem[0][2].mod = "Hydrogen"
+            if donor.stem[0][2].mod == "Hydroxy":
+                donor.stem[0][2].mod = "zero"
             else:
                 donor.stem[0][2].mod = "negHOxy"
         # 3-4 bonds remove a hydroxy from the donor terminus
