@@ -12,12 +12,14 @@ def allowed_modifications():
     allowed_modifications_df  = pd.read_csv(io.BytesIO(data), header=None)
     return allowed_modifications_df[0].tolist()
 
-def validate_raw_data_df(raw_data_df):
+def validate_raw_data_df(raw_data):
+    # FIXME: Add some validation for the ccf!
+    (ff, ccf) = raw_data
 
-    if not isinstance(raw_data_df, pd.DataFrame):
+    if not isinstance(ff, pd.DataFrame):
         raise ValueError('raw_data_df must be a DataFrame.')
     
-    if isinstance(raw_data_df, pd.DataFrame):
+    if isinstance(ff, pd.DataFrame):
         print("File is okay")
 
 
@@ -29,7 +31,7 @@ def validate_raw_data_df(raw_data_df):
                 'maxIntensity']
 
 
-    if not set(colnames).issubset(set(raw_data_df.columns.to_list())):
+    if not set(colnames).issubset(set(ff.columns.to_list())):
         raise('raw_data_df column names are incorrect')
 
 def validate_theo_masses_df(theo_masses_df):

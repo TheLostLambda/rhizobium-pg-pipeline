@@ -4,7 +4,6 @@ import numpy as np
 from decimal import *
 
 
-
 def calc_ppm_tolerance(mw: float, ppm_tol: int = 10):
     '''
     Calculates ppm tolerance value
@@ -25,15 +24,20 @@ def filtered_theo(ftrs_df, theo_list, user_ppm: int):
     :return dataframe:
     '''
 
-    matched_df = matching(ftrs_df,theo_list,user_ppm) # Match theoretical structures to raw data to generate a list of observed structures
+    # Match theoretical structures to raw data to generate a list of observed structures
+    matched_df = matching(ftrs_df, theo_list, user_ppm)
 
-    filtered_df = matched_df.loc[:, 'theo_mwMonoisotopic':'inferredStructure'] # Create dataframe containing only theo_mwMonoisotopic & inferredStructure columsn from matched_df
-    filtered_df.dropna(subset=['theo_mwMonoisotopic'], inplace=True) # Drop all rows with NaN values in the theo_mwMonoisotopic column
+    # Create dataframe containing only theo_mwMonoisotopic & inferredStructure columsn from matched_df
+    filtered_df = matched_df.loc[:, 'theo_mwMonoisotopic':'inferredStructure']
+    # Drop all rows with NaN values in the theo_mwMonoisotopic column
+    filtered_df.dropna(subset=['theo_mwMonoisotopic'], inplace=True)
 
-    #Explode dataframe so each inferred structure has its own row and corresponding theo_mwMonoisotopic value
+    # Explode dataframe so each inferred structure has its own row and corresponding theo_mwMonoisotopic value
     cols = ['theo_mwMonoisotopic', 'inferredStructure']
-    exploded_df = pd.concat([filtered_df[col].str.split(',', expand=True) for col in cols], axis=1, keys=cols).stack().reset_index(level=1, drop=True)
-    exploded_df.drop_duplicates(subset='inferredStructure', keep='first', inplace=True)
+    exploded_df = pd.concat([filtered_df[col].str.split(',', expand=True)
+                            for col in cols], axis=1, keys=cols).stack().reset_index(level=1, drop=True)
+    exploded_df.drop_duplicates(
+        subset='inferredStructure', keep='first', inplace=True)
 
     exploded_df.rename(columns={'theo_mwMonoisotopic': 'Monoisotopicmass', 'inferredStructure': 'Structure'},
                        inplace=True)
@@ -51,11 +55,12 @@ def multimer_builder(theo_list, multimer_type: int = 0):
 
     theo_mw = []
     theo_struct = []
-#Builder sub function - calculates multimer mass and name
+# Builder sub function - calculates multimer mass and name
 
     def builder(name, mass, mult_num: int):
         for idx, row in theo_list.iterrows():
-            if len(row.Structure[:len(row.Structure)-2]) > 2: #Prevent dimer creation using just GM (input format is XX|n) X = letters n = number
+            # Prevent dimer creation using just GM (input format is XX|n) X = letters n = number
+            if len(row.Structure[:len(row.Structure)-2]) > 2:
                 mw = row.Monoisotopicmass
                 acceptor = row.Structure[:len(row.Structure)-2]
                 donor = name
@@ -90,7 +95,8 @@ def multimer_builder(theo_list, multimer_type: int = 0):
         builder("-Lac-AEJA-Lac-AEJA", Decimal('1048.4560'), 3)
 
     # converts lists to dataframe
-    multimer_df = pd.DataFrame(list(zip(theo_mw, theo_struct)), columns=['Monoisotopicmass', 'Structure'])
+    multimer_df = pd.DataFrame(list(zip(theo_mw, theo_struct)), columns=[
+                               'Monoisotopicmass', 'Structure'])
 
     return multimer_df
 
@@ -166,7 +172,7 @@ def matching(ftrs_df: pd.DataFrame, matching_df: pd.DataFrame, set_ppm: int):
     '''
 
     raw_data = ftrs_df.copy()
-    #Data validation
+    # Data validation
     if ('Monoisotopicmass' not in matching_df.columns) | ('Structure' not in matching_df.columns):
         print(
             'Header of csv files must have column named "Monoisotopic mass" and another column named "Structure"!!!  Make note of capitalized letters and spacing!!!!')
@@ -177,13 +183,15 @@ def matching(ftrs_df: pd.DataFrame, matching_df: pd.DataFrame, set_ppm: int):
         # ppm tolerance value
         t_tol = calc_ppm_tolerance(mw, set_ppm)
         # create dataframe with values from matching_df within tolerance to observed monoisotopic mass
-        t_df = matching_df[(matching_df['Monoisotopicmass'] >= mw - t_tol) & (matching_df['Monoisotopicmass'] <= mw + t_tol)]
+        t_df = matching_df[(matching_df['Monoisotopicmass'] >= mw - t_tol)
+                           & (matching_df['Monoisotopicmass'] <= mw + t_tol)]
 
         # Populate inferred structure and theo_mwMonoisotopic columns with matched values
         if not t_df.empty:
-            raw_data.loc[x, "inferredStructure"] = ','.join(t_df.Structure.values)
-            raw_data.loc[x, "theo_mwMonoisotopic"]= ','.join(map(str, t_df.Monoisotopicmass.values))
-
+            raw_data.loc[x, "inferredStructure"] = ','.join(
+                t_df.Structure.values)
+            raw_data.loc[x, "theo_mwMonoisotopic"] = ','.join(
+                map(str, t_df.Monoisotopicmass.values))
 
     return raw_data
 
@@ -194,7 +202,7 @@ def clean_up(ftrs_df, mass_to_clean: Decimal, time_delta: float):
     sodiated = Decimal('21.9819')
     potassated = Decimal('37.9559')
     decay = Decimal('203.0793')
-    
+
     # Selector substrings for generating parent and adduct dataframes
     if mass_to_clean == sodiated:
         parent = "^GM|^M|^Lac"
@@ -208,26 +216,27 @@ def clean_up(ftrs_df, mass_to_clean: Decimal, time_delta: float):
 
     # Generate parent dataframe - contains parents
     parent_muropeptide_df = ftrs_df[
-        ftrs_df['inferredStructure'].str.contains(parent, na=False)] 
-    
-    # Generate adduct dataframe - contains adducts 
+        ftrs_df['inferredStructure'].str.contains(parent, na=False)]
+
+    # Generate adduct dataframe - contains adducts
     adducted_muropeptide_df = ftrs_df[
-        ftrs_df['inferredStructure'].str.contains(target, na=False)]  
-    
+        ftrs_df['inferredStructure'].str.contains(target, na=False)]
+
     # Generate copy of rawdata dataframe
     consolidated_decay_df = ftrs_df.copy()
 
     # Status updates (prints to console)
     if parent_muropeptide_df.empty:
-        print("No ", parent ," muropeptides found")
+        print("No ", parent, " muropeptides found")
     if adducted_muropeptide_df.empty:
-        print("No ", target ," found")
+        print("No ", target, " found")
     elif mass_to_clean == sodiated:
         print("Processing", adducted_muropeptide_df.size, "Sodium Adducts")
     elif mass_to_clean == potassated:
         print("Processing", adducted_muropeptide_df.size, "potassium adducts")
     elif mass_to_clean == decay:
-        print("Processing", adducted_muropeptide_df.size, "in source decay products")
+        print("Processing", adducted_muropeptide_df.size,
+              "in source decay products")
 
     # Consolidate adduct intensity with parent ions intensity
     for y, row in parent_muropeptide_df.iterrows():
@@ -239,28 +248,28 @@ def clean_up(ftrs_df, mass_to_clean: Decimal, time_delta: float):
         # Work out rt window
         upper_lim_rt = rt + time_delta
         lower_lim_rt = rt - time_delta
-        
+
         # Get all adduct enteries within rt window
         ins_constrained_df = adducted_muropeptide_df[adducted_muropeptide_df['rt'].between(lower_lim_rt, upper_lim_rt,
                                                                                            inclusive='both')]
 
-        
         if not ins_constrained_df.empty:
 
             for z, ins_row in ins_constrained_df.iterrows():
                 ins_mw = list(str(ins_row.theo_mwMonoisotopic).split(","))
-                
+
                 # Compare parent masses to adduct masses
                 for mass in intact_mw:
                     for mass_2 in ins_mw:
 
                         mass_delta = abs(
                             Decimal(mass).quantize(Decimal('0.00001')) - Decimal(mass_2).quantize(Decimal('0.00001')))
-                        
+
                         # Consolidate intensities
                         if mass_delta == mass_to_clean:
 
-                            consolidated_decay_df.sort_values('ID', inplace=True, ascending=True)
+                            consolidated_decay_df.sort_values(
+                                'ID', inplace=True, ascending=True)
 
                             insDecay_intensity = ins_row.maxIntensity
                             parent_intensity = row.maxIntensity
@@ -269,13 +278,18 @@ def clean_up(ftrs_df, mass_to_clean: Decimal, time_delta: float):
                             ID = row.ID
                             drop_ID = ins_row.ID
 
-                            idx = consolidated_decay_df.loc[consolidated_decay_df['ID'] == ID].index[0]
+                            idx = consolidated_decay_df.loc[consolidated_decay_df['ID']
+                                                            == ID].index[0]
                             try:
-                                drop_idx = consolidated_decay_df.loc[consolidated_decay_df['ID'] == drop_ID].index[0]
-                                consolidated_decay_df.at[idx, 'maxIntensity'] = consolidated_intensity
-                                consolidated_decay_df.drop(drop_idx, inplace=True)
+                                drop_idx = consolidated_decay_df.loc[consolidated_decay_df['ID']
+                                                                     == drop_ID].index[0]
+                                consolidated_decay_df.at[idx,
+                                                         'maxIntensity'] = consolidated_intensity
+                                consolidated_decay_df.drop(
+                                    drop_idx, inplace=True)
                             except IndexError:
-                                print("drop idx: ", drop_idx, " has already been removed")
+                                print("drop idx: ", drop_idx,
+                                      " has already been removed")
 
     return consolidated_decay_df
 
@@ -290,21 +304,38 @@ def ftrs_reader(filePath: str):
     with sqlite3.connect(filePath) as db:
 
         sql = "SELECT * FROM Features"
-        #Reads sql database into dataframe
+        # Reads sql database into dataframe
         ff = pd.read_sql(sql, db)
+        # Renames columns to expected column heading required for data_analysis function
+        ff.rename(columns={'Id': 'ID', 'apexRetentionTimeMinutes': 'rt',
+                  'apexMwMonoisotopic': 'mwMonoisotopic', 'maxAveragineCorrelation': 'corrMax'}, inplace=True)
         # adds inferredStructure column
         ff['inferredStructure'] = np.nan
         # adds theo_mwMonoisotopic column
         ff['theo_mwMonoisotopic'] = np.nan
-        # Renames columns to expected column heading required for data_analysis function
-        ff.rename(columns={'Id': 'ID', 'apexRetentionTimeMinutes': 'rt', 'apexMwMonoisotopic': 'mwMonoisotopic', 'maxAveragineCorrelation': 'corrMax' }, inplace=True)
         # Desired column order
         cols_order = ['ID', 'xicStart', 'xicEnd', 'feature', 'corrMax', 'ionCount', 'chargeOrder', 'maxIsotopeCount',
-                      'rt', 'mwMonoisotopic','theo_mwMonoisotopic', 'inferredStructure', 'maxIntensity', ]
+                      'rt', 'mwMonoisotopic', 'theo_mwMonoisotopic', 'inferredStructure', 'maxIntensity', ]
         # Reorder columns in dataframe to desired order.
         ff = ff[cols_order]
 
-        return ff
+        # Store some data from the ChargeClusters for getting scan numbers later
+        sql = "SELECT retentionTimeMinutes, vendorScanNumber FROM ChargeClusters"
+        ccf = pd.read_sql(sql, db)
+
+        return (ff, ccf)
+
+
+def add_scan_ranges(ff, ccf):
+    # FIXME: Add a doc-string here
+    def add_scan_range(row):
+        row['scanStart'] = int(ccf[ccf.retentionTimeMinutes >=
+                               row.xicStart].iloc[0].vendorScanNumber)
+        row['scanEnd'] = int(ccf[ccf.retentionTimeMinutes <=
+                             row.xicEnd].iloc[-1].vendorScanNumber)
+        return row
+
+    return ff.apply(add_scan_range, axis=1)
 
 
 def maxquant_file_reader(filepath: str):
@@ -324,23 +355,22 @@ def maxquant_file_reader(filepath: str):
     # insert dataframe index as a column
     maxquant_df.reset_index(level=0, inplace=True)
     # Renames columns to expected column heading required for data_analysis function
-    maxquant_df.rename(columns={'index': 'ID','Retention time': 'rt', 'Retention length': 'rt_length',
+    maxquant_df.rename(columns={'index': 'ID', 'Retention time': 'rt', 'Retention length': 'rt_length',
                                 'Mass': 'mwMonoisotopic', 'Intensity': "maxIntensity"},
-                               inplace=True)
+                       inplace=True)
     # Keeps only essential columns, all extraneous columns are left out.
     focused_maxquant_df = maxquant_df[['ID', 'mwMonoisotopic', 'rt', 'rt_length', 'maxIntensity', 'inferredStructure',
                                        'theo_mwMonoisotopic']]
     # Desired column order
-    cols_order = ['ID', 'rt', 'rt_length', 'mwMonoisotopic', 'theo_mwMonoisotopic', 'inferredStructure', 'maxIntensity']
+    cols_order = ['ID', 'rt', 'rt_length', 'mwMonoisotopic',
+                  'theo_mwMonoisotopic', 'inferredStructure', 'maxIntensity']
     # Reorder columns in dataframe to desired order.
     focused_maxquant_df = focused_maxquant_df[cols_order]
-
 
     return focused_maxquant_df
 
 
 def theo_masses_reader(filepath: str):
-
     '''
     Reads theoretical masses files (csv)
     :param filepath:
@@ -352,27 +382,25 @@ def theo_masses_reader(filepath: str):
     return theo_masses_df
 
 
-def data_analysis(raw_data_df: pd.DataFrame, theo_masses_df: pd.DataFrame, rt_window: float, enabled_mod_list: list, user_ppm = int):
+def data_analysis(raw_data_df: pd.DataFrame, theo_masses_df: pd.DataFrame, rt_window: float, enabled_mod_list: list, user_ppm=int):
 
     sugar = Decimal('203.0793')
     sodium = Decimal('21.9819')
     potassium = Decimal('37.9559')
-    time_delta_window = rt_window #retention time window to look in for in source decay products (rt of parent ion plus or minus time_delta)
-
-
-
+    # retention time window to look in for in source decay products (rt of parent ion plus or minus time_delta)
+    time_delta_window = rt_window
 
     theo = theo_masses_df
-    ff = raw_data_df
+    (ff, ccf) = raw_data_df
 
     print("Filtering Theo masses by observed masses")
-    obs_monomers_df = filtered_theo(ff, theo,user_ppm)
+    obs_monomers_df = filtered_theo(ff, theo, user_ppm)
 
     if 'Multimers' in enabled_mod_list:
         print("Building multimers from obs muropeptides")
         theo_multimers_df = multimer_builder(obs_monomers_df)
         print("fitering theo multimers by observed")
-        obs_multimers_df = filtered_theo(ff, theo_multimers_df,user_ppm)
+        obs_multimers_df = filtered_theo(ff, theo_multimers_df, user_ppm)
     elif 'multimers_Glyco' in enabled_mod_list:
         print("Building multimers from obs muropeptides")
         theo_multimers_df = multimer_builder(obs_monomers_df, 1)
@@ -432,21 +460,20 @@ def data_analysis(raw_data_df: pd.DataFrame, theo_masses_df: pd.DataFrame, rt_wi
         decay_df = pd.DataFrame()
 
     if 'Amidation' in enabled_mod_list:
-        ami_df = modification_generator(obs_theo_df,"Amidated")
+        ami_df = modification_generator(obs_theo_df, "Amidated")
     else:
         ami_df = pd.DataFrame()
 
     if 'Amidase' in enabled_mod_list:
-        deglyco_df = modification_generator(obs_theo_df,'Amidase Product')
+        deglyco_df = modification_generator(obs_theo_df, 'Amidase Product')
     else:
         deglyco_df = pd.DataFrame()
 
     if 'Double_Anh' in enabled_mod_list:
-        double_Anhydro_df = modification_generator(obs_theo_df, 'Double Anhydro')
+        double_Anhydro_df = modification_generator(
+            obs_theo_df, 'Double Anhydro')
     else:
         double_Anhydro_df = pd.DataFrame()
-
-
 
     master_frame = [obs_theo_df, adducts_potassium_df, adducts_sodium_df, anhydro_df, deac_anhy_df, deacetyl_df,
                     oacetyl_df, decay_df, nude_df, ami_df, deglyco_df, double_Anhydro_df]
@@ -459,11 +486,16 @@ def data_analysis(raw_data_df: pd.DataFrame, theo_masses_df: pd.DataFrame, rt_wi
     cleaned_df = clean_up(cleaned_df, potassium, time_delta_window)
     cleaned_data_df = clean_up(cleaned_df, sugar, time_delta_window)
 
-    cleaned_data_df.sort_values('inferredStructure', inplace=True, ascending=True)
+    cleaned_data_df.sort_values(
+        'inferredStructure', inplace=True, ascending=True)
+    cleaned_data_df.dropna(inplace=True)
+    print("Adding scan numbers")
+    final_df = add_scan_ranges(cleaned_data_df, ccf)
 
-    return cleaned_data_df
+    return final_df
 
-def dataframe_to_csv(save_filepath: str, filename:str ,output_dataframe: pd.DataFrame ):
+
+def dataframe_to_csv(save_filepath: str, filename: str, output_dataframe: pd.DataFrame):
     '''
     Writes dataframe to csv file at desired file location
     :param save_filepath:
@@ -472,8 +504,6 @@ def dataframe_to_csv(save_filepath: str, filename:str ,output_dataframe: pd.Data
     :return csv file:
     '''
 
-    #Combine save location and desired file name with correct formatting for output as csv file.
+    # Combine save location and desired file name with correct formatting for output as csv file.
     write_location = save_filepath + '/' + filename + '.csv'
     output_dataframe.to_csv(write_location, index=False)
-
-
