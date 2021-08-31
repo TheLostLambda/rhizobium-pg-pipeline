@@ -80,6 +80,13 @@ Matched Scans: 88
 Average Percent Observed: 55.11%
 Total Fragments Observed: 18 of 20
 Coverage Percent: 51.48%
+
+# After the ion fix!
+julia> summarise_ms2("Data/Outputs/MS2/GM-AEJA")
+Matched Scans: 88
+Average Percent Observed: 62.9%
+Total Fragments Observed: 19 of 20
+Coverage Percent: 61.7%
 #+END_SRC
 * Questions
   1) Has the MS1 program actually been updated to use the = and ~ operators?
@@ -90,6 +97,9 @@ Coverage Percent: 51.48%
      Charge_Mono_Caller.py:77: RuntimeWarning: invalid value encountered in true_divide
      t_product /= t_product.max()
      #+END_SRC
+  5) For B ions, the ~b_neutral~ is because the C-C=O leaves the middle carbon
+     positively charged? So we need to add an electron mass to make it neutral?
+     Why has the code changed from ~- hydrogen_mass~ to ~- proton_mass~?
 * Ideas
   - A scoring metric for the fragmentation could be the total number of fragment
     matches across all scans divided by the number of fragmentations. The "On
@@ -119,5 +129,6 @@ Coverage Percent: 51.48%
    - Glycan fragmentation results in oxonium ion formation, so I don't need to
      add the mass of a proton when a terminal contains a glycan fragment
    - I need to sort fragments based on whether they end in a peptide or glycan?
+   - This still has some deep issues... Chat with Ankur about it some more
 ** TODO Improve MS2 Scanning Performance
    - Parallelise searching for parent ions using Pool.map

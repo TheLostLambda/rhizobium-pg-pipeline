@@ -29,7 +29,7 @@ summarise(ms1data) = select(ms1data, :ionCount, :rt, :mwMonoisotopic, :inferredS
 "Load MS2 scores from the filenames within a directory"
 function load_ms2_scores(ms2dir)
   frag_files = filter(f -> '%' in f, readdir(ms2dir))
-  [parse(Int, split(f, '%')[1]) for f in frag_files]
+  [parse(Int, match(r"\((\d+)%\)", f)[1]) for f in frag_files]
 end
 
 "Summarise MS2 runs using several key statistics"

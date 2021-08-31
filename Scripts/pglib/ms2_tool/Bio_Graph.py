@@ -226,12 +226,14 @@ class Bio_Graph:
             # Otherwise, recursively fragment the molecule
             else:
                 # Generate a dictionary of single-cut products
-                cut_products = {id: graph for id, graph in self.bond_cutter(molecule).items() if id not in seen}
+                cut_products = {id: graph for id, graph in self.bond_cutter(
+                    molecule).items() if id not in seen}
                 seen |= cut_products.keys()
                 # Loop through the cut products, fragmenting them and adding the
                 # generated products to `all_fragments`
                 for graph in cut_products.values():
-                    all_fragments = recurse(nx.Graph(graph), seen) | all_fragments
+                    all_fragments = recurse(
+                        nx.Graph(graph), seen) | all_fragments
                 return all_fragments
 
         # Recursively compute all fragments
@@ -270,84 +272,57 @@ class Bio_Graph:
         return nfrag, cfrag, ifrag
 
     # Generate m/z masses
-    def generate_mass_to_charge_masses(self, n_terminal_fragments: list, c_terminal_fragments: list, internal_fragments: list, enabled_ions: list, charge_limit: int = 1):
+    def generate_mass_to_charge_masses(self, fgraphs, n_terminal_fragments: list, c_terminal_fragments: list,
+                                            internal_fragments: list, enabled_ions: list, charge_limit: int = 1):
         proton_mass = dec.Decimal('1.0073')
         mzlist_graph = []
-        a_mz = []
         b_mz = []
-        c_mz = []
         y_mz = []
-        x_mz = []
-        z_mz = []
         i_mz = []
 
-        C_term_neutral = dec.Decimal('17.0027')
         N_term_neutral = dec.Decimal('1.0078')
-        ammonia_mass = dec.Decimal('16.019')
-        aldehyde_mass = dec.Decimal('29.0027')
-        keto_mass = dec.Decimal('27.9949')
         hydrogen_mass = dec.Decimal('1.0078')
         proton_mass = dec.Decimal('1.0073')
 
         if 'y' in enabled_ions:
             for (mono_mass, graph) in c_terminal_fragments:
-                for charge_state in range(1, charge_limit+1):
+                g = nx.Graph(fgraphs[graph])
+                nodes = g.nodes(data='ID')
+                print(nodes, 'GlcNac' or 'MurNAc' in nodes)
+                for charge_state in range(1, charge_limit + 1):
                     y_neutral = mono_mass[0] + hydrogen_mass
                     y_mz.append(
-                        (y_neutral+(proton_mass*charge_state))/charge_state)
+                        (y_neutral + (proton_mass * charge_state)) / charge_state)
                 mzlist_graph.append((y_mz, "y_ion", graph))
                 y_mz = []
 
-        if 'x' in enabled_ions:
-            for (mono_mass, graph) in c_terminal_fragments:
-                for charge_state in range(1, charge_limit+1):
-                    x_neutral = mono_mass[0] + \
-                        C_term_neutral + keto_mass - hydrogen_mass
-                    x_mz.append(
-                        (x_neutral+(proton_mass*charge_state))/charge_state)
-                mzlist_graph.append((x_mz, "x_ion", graph))
-                x_mz = []
-
-        if 'z' in enabled_ions:
-            for (mono_mass, graph) in c_terminal_fragments:
-                for charge_state in range(1, charge_limit+1):
-                    z_neutral = mono_mass[0] + C_term_neutral - ammonia_mass
-                    z_mz.append(
-                        (z_neutral+(proton_mass*charge_state))/charge_state)
-                mzlist_graph.append((z_mz, "z_ion", graph))
-                z_mz = []
-
-        if 'a' in enabled_ions:
-            for (mono_mass, graph) in n_terminal_fragments:
-                for charge_state in range(1, charge_limit+1):
-                    a_neutral = mono_mass[0] + N_term_neutral + aldehyde_mass
-                    a_mz.append(
-                        (a_neutral+(proton_mass*charge_state))/charge_state)
-                mzlist_graph.append((a_mz, "a_ion", graph))
-                a_mz = []
-
         if 'b' in enabled_ions:
             for (mono_mass, graph) in n_terminal_fragments:
-                for charge_state in range(1, charge_limit+1):
-                    b_neutral = mono_mass[0] + N_term_neutral - hydrogen_mass
-                    b_mz.append(
-                        (b_neutral+(proton_mass*charge_state))/charge_state)
-                mzlist_graph.append((b_mz, "b_ion", graph))
-                b_mz = []
-
-        if 'c' in enabled_ions:
-            for (mono_mass, graph) in n_terminal_fragments:
-                for charge_state in range(1, charge_limit+1):
-                    c_neutral = mono_mass[0] + N_term_neutral + ammonia_mass
-                    c_mz.append(
-                        (c_neutral+(proton_mass*charge_state))/charge_state)
-                mzlist_graph.append((c_mz, "c_ion", graph))
-                c_mz = []
+                g = nx.Graph(fgraphs[graph])
+                nodes = g.nodes(data='ID')
+                print(nodes, 'GlcNac' or 'MurNAc' in nodes)
+                if 'GlcNac' or 'MurNAc' in nodes:
+                    for charge_state in range(1, charge_limit + 1):
+                        b_neutral = mono_mass[0] - proton_mass
+                        b_mz.append(
+                            (b_neutral + (proton_mass * charge_state)) / charge_state)
+                    mzlist_graph.append((b_mz, "b_ion", graph))
+                    b_mz = []
+                else:
+                    for charge_state in range(1, charge_limit + 1):
+                        b_neutral = mono_mass[0] + N_term_neutral - proton_mass
+                        b_mz.append(
+                            (b_neutral + (proton_mass * charge_state)) / charge_state)
+                    mzlist_graph.append((b_mz, "b_ion", graph))
+                    b_mz = []
 
         if 'i' in enabled_ions:
             for (mono_mass, graph) in internal_fragments:
+                g = nx.Graph(fgraphs[graph])
+                nodes = g.nodes(data='ID')
+                print(nodes, 'GlcNac' or 'MurNAc' in nodes)
                 for charge_state in range(1, charge_limit + 1):
-                    i_neutral = mono_mass[0] + N_term_neutral - hydrogen_mass
+                    i_neutral = mono_mass[0]
                     i_mz.append(
                         (i_neutral + (proton_mass * charge_state)) / charge_state)
                 mzlist_graph.append((i_mz, "i_ion", graph))
