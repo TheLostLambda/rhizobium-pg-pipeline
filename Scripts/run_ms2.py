@@ -67,29 +67,6 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
 
     for (mass, graph_ID) in molecule_momo_mass:
         print(f"{graph_name}: {mass}")
-        graph = nx.Graph(molecules[graph_ID])
-        fragments = bio_graph.fragmentation(graph)
-        total_theo_frags = len(fragments)
-        n_frag, c_frag, i_frag = bio_graph.sort_fragments(fragments)
-        nlist = bio_graph.monoisotopic_mass_calculator(fragments, n_frag)
-        clist = bio_graph.monoisotopic_mass_calculator(fragments, c_frag)
-        ilist = bio_graph.monoisotopic_mass_calculator(fragments, i_frag)
-        frag_ions_df = bio_graph.generate_mass_to_charge_masses(
-            fragments, nlist, clist, ilist, selected_ions, user_set_charge)
-        theo = []
-        for row in frag_ions_df.values:
-            ions = row[0]
-            ion_type = row[1]
-            graph_key = row[2]
-            g = nx.Graph(fragments[graph_key])
-            gnodes = g.nodes
-            theo.append((ions, ion_type, gnodes))
-
-        theo_df = pd.DataFrame(theo, columns=['mz','Ion Type', 'Structure'])
-        theo_df.to_csv('theo_frags_list.csv')
-        print(theo_df)
-        breakpoint()
-        exit(0)
         scans_to_search = []
         upper_mass_lim = mass + calculate_ppm_tolerance(mass, i_ppm)
         lower_mass_lim = mass - calculate_ppm_tolerance(mass, i_ppm)
@@ -171,8 +148,6 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
 
 
 if __name__ == "__main__":
-    autosearch("GM-AQK(AA)AA")
-    exit()
     with Pool() as p:
         structures = [nf.name.removesuffix(" NL.csv")
                       for nf in graph_folder.glob("* NL.csv")]
