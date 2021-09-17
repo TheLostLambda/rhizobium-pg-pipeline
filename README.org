@@ -118,25 +118,50 @@ Coverage Percent: 61.7%
    - In Byspec2 file, Spectra table has Parent Scan Number
    - In MS2 output, sort scan numbers in to folders that are named according to
      the parent scan number
+   - Output some scoring information and the scan number range of the MS2 scans
+     for each ion on interest
+   - Need to determine 3-3 or 4-3 and between monomer and dimer mass
+     coincidences
+   - Give the MS2 a list of selected structures and the MS1 file to add data to
+   - Sort MS2 scans into parent scan ranges (folders)
+   - GM-AEJAG or GM-AEJD?
+   - Also penta-tri vs tetra-tetra
+   - Generate statistics / scores for groups depending on the parent ion range
+     they come from
+*** Proposed UI
+    1) Run the PGFinder to generate a list of parent ions
+    2) List the ambiguous PG structures of interest in a file
+    3) The MS2 tool goes through each match in the MS1 output, generating a
+       folder for each parent ion scan number with a fragmentation found
+    4) MS2 scans and information is saved in the appropriate parent ion folder
+    5) When a structure is ambiguous, all possible structures are fragmented, a
+       set difference is taken, and the appearance of unique fragments is used
+       as an indicator of the true structure
+       - Each structure can be scored on the "coverage percent" of these unique
+         fragments
+    6) These coverage-percents are written out to a reduced version of the
+       original MS1 input, with only the structures of interest and an
+       additional column for coverage percents added
+** TODO Fix the generation of 3-4 bonded graphs
+   - It looked like I might have a bug where 3-3 bonding is present in 3-4 files?
+** TODO Improve MS2 Scanning Performance
+   - Parallelise searching for parent ions using Pool.map
+** TODO Add Julia stats to MS2 in Python
+** TODO Set difference of fragments to focus scoring on unique, differentiating fragments
+** TODO Add myself to the digital lab-book / todo list
 ** DONE Improve Multimer Builder
    CLOSED: [2021-08-30 Mon 21:34]
    - Read data from file(s)
    - Make sure that the new === and =~= terminology is working
    - *CHECK THAT GLYCO ACTUALLY WORKS!*
-** TODO Fix the generation of 3-4 bonded graphs
-   - It looked like I might have a bug where 3-3 bonding is present in 3-4 files?
 ** DONE Fix MS2 Ion Generation
    CLOSED: [2021-08-31 Tue 22:53]
    - Glycan fragmentation results in oxonium ion formation, so I don't need to
      add the mass of a proton when a terminal contains a glycan fragment
    - I need to sort fragments based on whether they end in a peptide or glycan?
    - This still has some deep issues... Chat with Ankur about it some more
-** TODO Improve MS2 Scanning Performance
-   - Parallelise searching for parent ions using Pool.map
 ** DONE Modify the bond cutter to generate neutral ions
    CLOSED: [2021-08-31 Tue 23:19]
    - MurNAc is just like C terminal with C+---O
-** TODO Add Julia stats to MS2 in Python
 ** DONE Meet with Ankur about ion fixes!
    CLOSED: [2021-08-31 Tue 23:19]
-** TODO Set difference of fragments to focus scoring on unique, differentiating fragments
