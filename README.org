@@ -124,13 +124,12 @@ Coverage Percent: 61.7%
      coincidences
    - Give the MS2 a list of selected structures and the MS1 file to add data to
    - Sort MS2 scans into parent scan ranges (folders)
-   - GM-AEJAG or GM-AEJD?
-   - Also penta-tri vs tetra-tetra
    - Generate statistics / scores for groups depending on the parent ion range
      they come from
 *** Proposed UI
     1) Run the PGFinder to generate a list of parent ions
-    2) List the ambiguous PG structures of interest in a file
+    2) List the ambiguous PG structures of interest in a file (start with
+       monomers)
     3) The MS2 tool goes through each match in the MS1 output, generating a
        folder for each parent ion scan number with a fragmentation found
     4) MS2 scans and information is saved in the appropriate parent ion folder
@@ -142,6 +141,10 @@ Coverage Percent: 61.7%
     6) These coverage-percents are written out to a reduced version of the
        original MS1 input, with only the structures of interest and an
        additional column for coverage percents added
+*** Focuses
+    1) GM-AEJAG or GM-AEJD?
+    2) Check if consolidated ions are really the same structure
+    3) Also penta-tri vs tetra-tetra / 3-3 or 3-4 (dimer ambiguities)
 ** TODO Fix the generation of 3-4 bonded graphs
    - It looked like I might have a bug where 3-3 bonding is present in 3-4 files?
 ** TODO Improve MS2 Scanning Performance

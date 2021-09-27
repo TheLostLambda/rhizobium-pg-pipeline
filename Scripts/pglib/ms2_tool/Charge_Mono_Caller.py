@@ -1,7 +1,7 @@
 import numpy as np
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 import os.path
 # from matplotlib import pyplot as plt
 
@@ -17,8 +17,6 @@ MZ_MATCH_INDEX = int(APEX_CHARGE_CLUSTERING * VECTOR_GRANULARITY)
 VECTOR_ARRAY_LENGTH = int((MZ_MATCH_INDEX * 2) + 1)
 ERROR_RANGE = 0.02
 ERROR_RANGE_HASHED = int(ERROR_RANGE * VECTOR_GRANULARITY)
-NN_SIMPLE_CHARGE_WEIGHTS = r"C:\Users\ankur\Documents\Code\PMI module\FOUR_APEX_OLD\Models\simple_weights.nn"
-NN_MONO_WEIGHTS = r"C:/Users/ankur/Documents/Code/PMI module/FOUR_APEX_OLD/Models/"
 MZ_END = 2000
 APEX_CHARGE_CLUSTERING_HASHED = int(APEX_CHARGE_CLUSTERING * VECTOR_GRANULARITY)
 
