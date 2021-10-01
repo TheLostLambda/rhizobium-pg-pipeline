@@ -135,11 +135,14 @@ class Dimer:
     sep_re = re.compile(r"([~=])")
     crosslinks = ["3-3", "3-4"]
 
-    def __init__(self, ms1_str):
-        # Save the MS1 string for later
-        self.structure = ms1_str
+    def __init__(self, ms1_str, flipped=False):
         # Split the MS1 monomers
         monomers = Dimer.sep_re.split(ms1_str)
+        # Optionally swap the acceptor and donor monomers
+        if flipped:
+            monomers.reverse()
+        # Save the MS1 string for later
+        self.structure = "".join(monomers)
         # Remove and record the dimer separator
         self.glycosidic = monomers.pop(1) == "~"
         # If the monomers joined by a glycosidic bond
@@ -167,7 +170,7 @@ class Dimer:
         # Get monomer stem lengths
         a_len, d_len = (len(acceptor.flat_stem()), len(donor.flat_stem()))
         # Check for illegal crosslinking combinations
-        if type == "3-3" and min(a_len, d_len) < 3:
+        if type == "3-3" and min(a_len, d_len) != 3:
             return None
         if type == "3-4" and (a_len < 3 or d_len != 4):
             return None
@@ -220,7 +223,7 @@ class Dimer:
             # Add a 3-4 peptide bond if possible
             if "3-4" in edges:
                 acceptor, donor = self.monomers["3-4"]
-                bond = Edge(donor.stem[0][2].id, acceptor.stem[-1][-1].id, 2)
+                bond = Edge(donor.stem[-1][-1].id, acceptor.stem[0][2].id, 2)
                 edges["3-4"].append(bond)
             # Return the named edge lists
             return {f"{self.structure} ({type})": edges
@@ -252,16 +255,22 @@ def load_structures(ms1_file):
     with open(ms1_file) as f:
         rows = csv.reader(f)
         ms1 = [r[0].split("|")[0] for r in rows][1:]
+    return ms1
+
+
+def parse_structures(ms1):
     # Return generated graphs for every MS1 structure
-    return [Dimer(s) if Dimer.sep_re.search(s) else Monomer(s) for s in ms1]
+    structs = [[Dimer(s), Dimer(s, flipped=True)] if Dimer.sep_re.search(s) else [Monomer(s)] for s in ms1]
+    # Flatten the nested lists
+    return sum(structs, [])
 
 
 if __name__ == "__main__":
     # Extract the MS1 input filepath and graph output path from the arguments
-    ms1_file = sys.argv[1]
-    out_dir = sys.argv[2]
+    ms1_file=sys.argv[1]
+    out_dir=sys.argv[2]
     # Load the MS1 structures from CSV
-    mols = load_structures(ms1_file)
+    mols=load_structures(ms1_file)
     # Write graphs for every MS1 structure
     for mol in mols:
         write_graphs(mol, out_dir)

@@ -1,4 +1,3 @@
-import os
 from pglib.ms2_tool import Charge_Mono_Caller as CMC
 from pglib.ms2_tool import Byspec_Reader as BR
 import networkx as nx
@@ -8,9 +7,14 @@ from pglib.ms2_tool import Bio_Graph as BG
 import pandas as pd
 from pathlib import Path
 from multiprocessing import Pool
+from build_graphs import load_structures, parse_structures, write_graphs
+import re
+from datetime import datetime
 
 # Change to relevant graph files and data
 data_file = Path("Data/Inputs/20210618_RhiLeg_ndslt_TY_1.raw.byspec2")
+ms1_file = Path("Data/Outputs/MS1.csv")
+selected_structures = Path("Data/Outputs/selected_structures.csv")
 graph_folder = Path("Data/Outputs/Graphs/")
 output_dir = Path("Data/Outputs/MS2/")
 
@@ -18,6 +22,23 @@ output_dir = Path("Data/Outputs/MS2/")
 mass_table = "Data/Constants/masses_table.csv"
 mod_table = "Data/Constants/mods_table.csv"
 selected_ions = ['y', 'b', 'i']
+
+# Break this file up into sub-files in pglib/ms2_tool
+
+
+def split_structures(st):
+    return re.findall(r"([A-Z-=~]+)", st)
+
+
+def filter_structures(df, structures):
+    return df[df["inferredStructure"].apply(
+        lambda ss: not set(structures).isdisjoint(split_structures(ss)))]
+
+
+def all_structures(df):
+    return {struct
+            for structs in df["inferredStructure"].apply(split_structures)
+            for struct in structs}
 
 
 def calculate_ppm_tolerance(mass, ppm_tol):
@@ -28,59 +49,67 @@ def ppm_error(obs_mass, theo_mass):
     return (1-(dec.Decimal(obs_mass)/theo_mass))*1000000
 
 
-def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'):
-    nl = Path(graph_folder) / (graph_name + " NL.csv")
-    el = Path(graph_folder) / (graph_name + " EL.csv")
-    hf = hfunc.Helper_Funcs(nl, el)
-    nodes_from_file = hf.nodes_df()
-    edges_from_file = hf.edges_df()
-    mass_dict = hf.generate_dict(dict_table_filepath=mass_table)
-    mod_dict = hf.generate_dict(dict_table_filepath=mod_table)
+def resolve_row(ms1_row, set_charge=1, intact_ppm_tol='10', frag_ppm='20'):
+    start = ms1_row.scanStart
+    end = ms1_row.scanEnd
+    structures = [nf.name.removesuffix(" NL.csv")
+                  for s in all_structures(ms1_row.to_frame().T)
+                  for nf in graph_folder.glob(f"{s} *NL.csv")]
+    coverage_percents = {}
+    for structure in structures:
+        nl = Path(graph_folder) / (structure + " NL.csv")
+        el = Path(graph_folder) / (structure + " EL.csv")
+        hf = hfunc.Helper_Funcs(nl, el)
+        nodes_from_file = hf.nodes_df()
+        edges_from_file = hf.edges_df()
+        mass_dict = hf.generate_dict(dict_table_filepath=mass_table)
+        mod_dict = hf.generate_dict(dict_table_filepath=mod_table)
 
-    bio_graph = BG.Bio_Graph(
-        nodes_from_file, edges_from_file, mass_dict, mod_dict)
+        bio_graph = BG.Bio_Graph(
+            nodes_from_file, edges_from_file, mass_dict, mod_dict)
 
-    molecules = {}
-    molecule_IDs = []
-    frag_structure = []
-    matched_output = []
+        molecules = {}
+        molecule_IDs = []
+        frag_structure = []
+        matched_output = []
 
-    NN_SIMPLE_CHARGE_WEIGHTS = "Data/Constants/Models/simple_weights.nn"
-    NN_MONO_WEIGHTS = "Data/Constants/Models/"
-    charge_mono_caller = CMC.Charge_Mono_Caller(
-        NN_SIMPLE_CHARGE_WEIGHTS, NN_MONO_WEIGHTS)
-    byspec_reader = BR.Byspec_Reader(data_file)
-    scan_mz_charges = byspec_reader.get_scan_mz_charge()
-    i_ppm = dec.Decimal(intact_ppm_tol)
-    f_ppm = dec.Decimal(frag_ppm)
+        NN_SIMPLE_CHARGE_WEIGHTS = "Data/Constants/Models/simple_weights.nn"
+        NN_MONO_WEIGHTS = "Data/Constants/Models/"
+        charge_mono_caller = CMC.Charge_Mono_Caller(
+            NN_SIMPLE_CHARGE_WEIGHTS, NN_MONO_WEIGHTS)
+        byspec_reader = BR.Byspec_Reader(data_file)
+        scan_mz_charges = byspec_reader.filter_children_with_parent_in_range(
+            start, end).get_scan_mz_charge()
+        i_ppm = dec.Decimal(intact_ppm_tol)
+        f_ppm = dec.Decimal(frag_ppm)
 
-    master_graph = bio_graph.construct_graph()
+        master_graph = bio_graph.construct_graph()
 
-    for components in nx.connected_components(master_graph):
-        molecule = nx.subgraph(master_graph, components)
-        molecule_hash = bio_graph.graph_hash(molecule)
-        molecule_IDs.append(molecule_hash)
-        molecules.update({molecule_hash: molecule})
+        for components in nx.connected_components(master_graph):
+            molecule = nx.subgraph(master_graph, components)
+            molecule_hash = bio_graph.graph_hash(molecule)
+            molecule_IDs.append(molecule_hash)
+            molecules.update({molecule_hash: molecule})
 
-    molecule_momo_mass = bio_graph.monoisotopic_mass_calculator(
-        molecules, molecule_IDs)
+        mass, graph_ID = bio_graph.monoisotopic_mass_calculator(
+            molecules, molecule_IDs)[0]
 
-    for (mass, graph_ID) in molecule_momo_mass:
-        print(f"{graph_name}: {mass}")
+        print(f"{structure}: {mass}")
         scans_to_search = []
-        upper_mass_lim = mass + calculate_ppm_tolerance(mass, i_ppm)
-        lower_mass_lim = mass - calculate_ppm_tolerance(mass, i_ppm)
+        min_mass = mass - calculate_ppm_tolerance(mass, i_ppm)
+        max_mass = mass + calculate_ppm_tolerance(mass, i_ppm)
 
-        for scan_mz_charge_tuple in scan_mz_charges:
+        for i, scan_mz_charge_tuple in enumerate(scan_mz_charges, start=1):
+            print(f"Scanning {i}/{len(scan_mz_charges)}...", end="\r")
             scan = byspec_reader.get_scan_by_scan_number(
                 scan_mz_charge_tuple[0])
             try:
                 caller_result = charge_mono_caller.process(
                     scan, scan_mz_charge_tuple[1])
-                if caller_result['monoisotopic_mass'] > lower_mass_lim:
-                    if caller_result['monoisotopic_mass'] < upper_mass_lim:
-                        print('Valid scan added')
-                        scans_to_search.append(scan_mz_charge_tuple[3])
+                if min_mass < caller_result['monoisotopic_mass'] < max_mass:
+                    # Padding hack!
+                    print('Valid scan added' + ' ' * 10)
+                    scans_to_search.append(scan_mz_charge_tuple[3])
 
             except IndexError:
                 print('-' * 20)
@@ -92,9 +121,10 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
 
         if not scans_to_search:
             print('scan_to_search is empty')
+            continue
 
-        output_path = output_dir / graph_name
-        os.mkdir(output_path)
+        output_path = output_dir / f"{start}-{end}" / structure
+        output_path.mkdir(parents=True, exist_ok=True)
 
         graph = nx.Graph(molecules[graph_ID])
         fragments = bio_graph.fragmentation(graph)
@@ -104,10 +134,11 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
         clist = bio_graph.monoisotopic_mass_calculator(fragments, c_frag)
         ilist = bio_graph.monoisotopic_mass_calculator(fragments, i_frag)
         frag_ions_df = bio_graph.generate_mass_to_charge_masses(
-            fragments, nlist, clist, ilist, selected_ions, user_set_charge)
+            fragments, nlist, clist, ilist, selected_ions, set_charge)
 
         all_obs_frags = {tuple(sorted(f.nodes)): 0 for f in fragments.values()}
 
+        print("Writing results..." + ' ' * 10)
         for scan_number in scans_to_search:
             scan = byspec_reader.get_scan_by_scan_number(scan_number)
             frags_in_scan = set()
@@ -143,12 +174,26 @@ def autosearch(graph_name, user_set_charge=2, intact_ppm_tol='10', frag_ppm='20'
                 output_path / f'{scan_number} ({score}%).csv')
             matched_output.clear()
         df = pd.DataFrame(all_obs_frags.items(), columns=['Fragment', 'Count'])
+        total_observed = len([c for c in all_obs_frags.values() if c > 0])
+        coverage_percents[structure] = round(
+            100 * sum(all_obs_frags.values()) / (total_theo_frags * len(scans_to_search)), 3)
         df.to_csv(
-            output_path / f'Observed Fragments ({len([c for c in all_obs_frags.values() if c > 0])} of {total_theo_frags}).csv', index=False)
+            output_path / f'Observed Fragments ({total_observed} of {total_theo_frags}).csv', index=False)
+    ms1_row["coveragePercents"] = str(coverage_percents)
+    return ms1_row
 
 
 if __name__ == "__main__":
+    # FIXME: Add the ability to automatically run MS2 on 100% of structures!
+    mols = load_structures(selected_structures)
+    ms1_df = pd.read_csv(ms1_file)
+    filtered_ms1 = filter_structures(ms1_df, mols)
+    for struct in parse_structures(all_structures(filtered_ms1)):
+        write_graphs(struct, graph_folder)
+    #print(*[x for x in map(resolve_row, [r for _, r in filtered_ms1.iterrows()]) if x], sep='\n')
+    # quit()
+    output_dir /= datetime.now().strftime("%F (%R)")
     with Pool() as p:
-        structures = [nf.name.removesuffix(" NL.csv")
-                      for nf in graph_folder.glob("* NL.csv")]
-        p.map(autosearch, structures)
+        rows = p.map(resolve_row, [r for _, r in filtered_ms1.iterrows()])
+    df = pd.concat(rows, axis=1)[1:].T
+    df.to_csv(output_dir / "MS2.csv", index=False)

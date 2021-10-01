@@ -73,7 +73,8 @@ class Charge_Determinator:
         x = []
         for charge in range(MAX_CHARGE_STATE):
             t_product = (scan_array * succesive_comb_filters[charge]).sum(axis=1)
-            t_product /= t_product.max()
+            if (max := t_product.max()) > 0:
+                t_product /= max
             [x.append(xx) for xx in t_product]
 
         return np.array(x)

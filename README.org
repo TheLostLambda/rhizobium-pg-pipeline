@@ -107,7 +107,8 @@ Coverage Percent: 61.7%
     be 14.31. This is like an average "cover depth" – the average number of
     times each theoretical fragment is observed
 * Tasks
-** TODO MS1 Output Needs Scan Number Outputs
+** DONE MS1 Output Needs Scan Number Outputs
+   CLOSED: [2021-09-30 Thu 21:54]
    - Pull out XIC start / end
    - FTRS is SQL, match the RT of ChargeClusters with the xicStart and end from
      Features
@@ -142,16 +143,25 @@ Coverage Percent: 61.7%
        original MS1 input, with only the structures of interest and an
        additional column for coverage percents added
 *** Focuses
-    1) GM-AEJAG or GM-AEJD?
+    1) GM-AEJAG or GM-AEJQ?
     2) Check if consolidated ions are really the same structure
     3) Also penta-tri vs tetra-tetra / 3-3 or 3-4 (dimer ambiguities)
 ** TODO Fix the generation of 3-4 bonded graphs
    - It looked like I might have a bug where 3-3 bonding is present in 3-4 files?
-** TODO Improve MS2 Scanning Performance
-   - Parallelise searching for parent ions using Pool.map
-** TODO Add Julia stats to MS2 in Python
+** TODO Add a mass to the MS2 fragments
+   - Sort by mass
+** DONE Add Julia stats to MS2 in Python
+   CLOSED: [2021-09-30 Thu 21:56]
 ** TODO Set difference of fragments to focus scoring on unique, differentiating fragments
-** TODO Add myself to the digital lab-book / todo list
+   - Still include all fragments, but bump up unique ones by some user-defined
+     factor
+   - Alternatively, return two scores; one with all fragments present and one
+     with only the unique fragments
+** DONE Add myself to the digital lab-book / todo list
+   CLOSED: [2021-09-30 Thu 21:56]
+** DONE Improve MS2 Scanning Performance
+   CLOSED: [2021-09-29 Wed 12:14]
+   - Parallelise searching for parent ions using Pool.map
 ** DONE Improve Multimer Builder
    CLOSED: [2021-08-30 Mon 21:34]
    - Read data from file(s)
