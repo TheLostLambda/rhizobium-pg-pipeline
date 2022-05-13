@@ -9,6 +9,12 @@ from tempfile import TemporaryDirectory
 MASSES = "Data/Constants/masses_table.csv"
 MODS = "Data/Constants/mods_table.csv"
 
+
+# FIXME: This is almost certainly in the wrong place...
+def pretty_print_nodes(nodes):
+    return "-".join(sorted(nodes, key=lambda n: int(n[1:])))
+
+
 if __name__ == "__main__":
     ms1_file = sys.argv[1]
     out_dir = sys.argv[2]
@@ -27,15 +33,19 @@ if __name__ == "__main__":
             bg = Bio_Graph(hf.nodes_df(), hf.edges_df(), masses, mods)
             graph = bg.construct_graph()
             fragments = bg.fragmentation(graph)
-            nfrags, cfrags, ifrags = [sorted(f, key=lambda i: len(fragments[i].nodes))
-                                      for f in bg.sort_fragments(fragments)]
+            nfrags, cfrags, ifrags = [
+                sorted(f, key=lambda i: len(fragments[i].nodes))
+                for f in bg.sort_fragments(fragments)
+            ]
 
-            tagged_frags = [*[(i, "N-Terminal", fragments[i].nodes) for i in nfrags],
-                            *[(i, "C-Terminal", fragments[i].nodes) for i in cfrags],
-                            *[(i, "Internal", fragments[i].nodes) for i in ifrags]]
+            tagged_frags = [
+                *[(i, "N-Terminal", fragments[i].nodes) for i in nfrags],
+                *[(i, "C-Terminal", fragments[i].nodes) for i in cfrags],
+                *[(i, "Internal", fragments[i].nodes) for i in ifrags],
+            ]
             with open(Path(out_dir) / f"{structure_name} Fragments.csv", "w") as f:
                 ff = csv.writer(f)
                 ff.writerow(["Type", "Mass", "Parts"])
                 for id, type, frag in tagged_frags:
                     mass = bg.monoisotopic_mass_calculator(fragments, [id])[0][0]
-                    ff.writerow([type, mass, frag])
+                    ff.writerow([type, mass, pretty_print_nodes(frag)])
