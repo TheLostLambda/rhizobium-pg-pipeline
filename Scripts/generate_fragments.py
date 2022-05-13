@@ -1,7 +1,7 @@
 import sys
 import csv
 from pathlib import Path
-from build_graphs import load_structures, write_graphs
+from build_graphs import load_structures, parse_structures, write_graphs
 from pglib.ms2_tool.Helper_Funcs import Helper_Funcs
 from pglib.ms2_tool.Bio_Graph import Bio_Graph
 from tempfile import TemporaryDirectory
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     out_dir = sys.argv[2]
     mols = load_structures(ms1_file)
     with TemporaryDirectory() as tmp:
-        for mol in mols:
+        for mol in parse_structures(mols):
             write_graphs(mol, tmp)
         p = Path(tmp)
         for node_file in p.glob("* NL.csv"):

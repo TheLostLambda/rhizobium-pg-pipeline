@@ -186,8 +186,9 @@ class Dimer:
             else:
                 donor.stem[0][2].mod = "negHOxy"
         # 3-4 bonds remove a hydroxy from the donor terminus
+        # FIXME: Take a closer look at this!
         if type == "3-4":
-            donor.stem[-1][-1].mod = "Hydrogen"
+            donor.stem[-1][-1].mod = "zero"
         # Return the crosslinked monomers
         return [acceptor, donor]
 

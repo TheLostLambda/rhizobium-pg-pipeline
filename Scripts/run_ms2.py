@@ -136,7 +136,11 @@ def resolve_row(ms1_row, set_charge=1, intact_ppm_tol='10', frag_ppm='20'):
         frag_ions_df = bio_graph.generate_mass_to_charge_masses(
             fragments, nlist, clist, ilist, selected_ions, set_charge)
 
-        all_obs_frags = {tuple(sorted(f.nodes)): 0 for f in fragments.values()}
+        all_obs_frags = [[tuple(sorted(f.nodes)), bio_graph.monoisotopic_mass_calculator(
+            fragments, [id])[0][0], 0] for id, f in fragments.items()]
+        all_obs_frags = pd.DataFrame(all_obs_frags, columns=[
+                                     'Structure', 'Mass', 'Count'])
+        all_obs_frags = all_obs_frags.set_index('Structure')
 
         print("Writing results..." + ' ' * 10)
         for scan_number in scans_to_search:
@@ -164,7 +168,7 @@ def resolve_row(ms1_row, set_charge=1, intact_ppm_tol='10', frag_ppm='20'):
                             frag_structure = []
 
             for frag in frags_in_scan:
-                all_obs_frags[frag] += 1
+                all_obs_frags.at[frag, 'Count'] += 1
 
             matched_output_df = pd.DataFrame(matched_output, columns=[
                                              'Observered Ion', 'Theoretical Ion', 'Charge', 'count', 'PPM Error', 'Ion Type', 'Structure'])
@@ -173,12 +177,11 @@ def resolve_row(ms1_row, set_charge=1, intact_ppm_tol='10', frag_ppm='20'):
             matched_output_df.to_csv(
                 output_path / f'{scan_number} ({score}%).csv')
             matched_output.clear()
-        df = pd.DataFrame(all_obs_frags.items(), columns=['Fragment', 'Count'])
-        total_observed = len([c for c in all_obs_frags.values() if c > 0])
+        total_observed = len(all_obs_frags[all_obs_frags['Count'] > 0])
         coverage_percents[structure] = round(
-            100 * sum(all_obs_frags.values()) / (total_theo_frags * len(scans_to_search)), 3)
-        df.to_csv(
-            output_path / f'Observed Fragments ({total_observed} of {total_theo_frags}).csv', index=False)
+            100 * sum(all_obs_frags['Count']) / (total_theo_frags * len(scans_to_search)), 3)
+        all_obs_frags.sort_values(by=['Mass']).to_csv(
+            output_path / f'Observed Fragments ({total_observed} of {total_theo_frags}).csv')
     ms1_row["coveragePercents"] = str(coverage_percents)
     return ms1_row
 
@@ -190,9 +193,10 @@ if __name__ == "__main__":
     filtered_ms1 = filter_structures(ms1_df, mols)
     for struct in parse_structures(all_structures(filtered_ms1)):
         write_graphs(struct, graph_folder)
-    #print(*[x for x in map(resolve_row, [r for _, r in filtered_ms1.iterrows()]) if x], sep='\n')
-    # quit()
     output_dir /= datetime.now().strftime("%F (%R)")
+    #print(*[x for x in map(resolve_row,
+    #      [r for _, r in filtered_ms1.iterrows()])], sep='\n')
+    #quit()
     with Pool() as p:
         rows = p.map(resolve_row, [r for _, r in filtered_ms1.iterrows()])
     df = pd.concat(rows, axis=1)[1:].T
