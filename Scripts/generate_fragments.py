@@ -31,8 +31,7 @@ if __name__ == "__main__":
                                       for f in bg.sort_fragments(fragments)]
 
             tagged_frags = [*[(i, "N-Terminal", fragments[i].nodes) for i in nfrags],
-                            *[(i, "C-Terminal", fragments[i].nodes)
-                              for i in cfrags],
+                            *[(i, "C-Terminal", fragments[i].nodes) for i in cfrags],
                             *[(i, "Internal", fragments[i].nodes) for i in ifrags]]
             with open(Path(out_dir) / f"{structure_name} Fragments.csv", "w") as f:
                 ff = csv.writer(f)

@@ -21,6 +21,12 @@ class Node:
         "Create a new peptide stem residue"
         return cls.__new__(residue, Node.stem_abbr)
 
+    # TODO: Is this really the most elegant solution?
+    @classmethod
+    def reset_ids(cls):
+        "Reset residue numbering"
+        cls.id_counter = 0
+
     @classmethod
     def __new__(cls, residue, abbr):
         # Create an instance of `Node` using the `__new__` of its parent
@@ -61,11 +67,14 @@ class Monomer:
 
     lat_re = re.compile(r"\((\w*)\)")
 
-    def __init__(self, ms1_str):
+    def __init__(self, ms1_str, reset_ids=True):
         # Save the MS1 string for later
         self.structure = ms1_str
         # Split the MS1 string into the glycan chain and peptide stem
         chain, stem = ms1_str.split("-")
+        # Conditionally reset node numbering
+        if reset_ids:
+            Node.reset_ids()
         # Create chain nodes
         self.chain = [Node.chain(r) for r in chain]
         # The first chain residue should have a "Hydrogen" modification
@@ -147,8 +156,10 @@ class Dimer:
         self.glycosidic = monomers.pop(1) == "~"
         # If the monomers joined by a glycosidic bond
         if self.glycosidic:
+            # Reset node numbering
+            Node.reset_ids()
             # Then convert the rest of the string to monomers
-            self.monomers = [Monomer(m) for m in monomers]
+            self.monomers = [Monomer(m, False) for m in monomers]
             # And oxidise / re-bond the MurNAc of the first monomer
             self.monomers[0].chain[-1].residue = "MurNAc"
             self.monomers[0].chain[-1].mod = "negH"
@@ -165,8 +176,10 @@ class Dimer:
         # Since the name `3-3` can only exist as a string, we need to check
         # that the provided string `type` is a valid mode of crosslinking
         assert type in Dimer.crosslinks
+        # Reset node numbering
+        Node.reset_ids()
         # Parse the monomer strings into Monomer objects
-        acceptor, donor = [Monomer(m) for m in monomers]
+        acceptor, donor = [Monomer(m, False) for m in monomers]
         # Get monomer stem lengths
         a_len, d_len = (len(acceptor.flat_stem()), len(donor.flat_stem()))
         # Check for illegal crosslinking combinations
@@ -186,7 +199,7 @@ class Dimer:
             else:
                 donor.stem[0][2].mod = "negHOxy"
         # 3-4 bonds remove a hydroxy from the donor terminus
-        # FIXME: Take a closer look at this!
+        # TODO: Take a closer look at this!
         if type == "3-4":
             donor.stem[-1][-1].mod = "zero"
         # Return the crosslinked monomers
