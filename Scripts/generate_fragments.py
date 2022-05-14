@@ -45,7 +45,9 @@ if __name__ == "__main__":
             ]
             with open(Path(out_dir) / f"{structure_name} Fragments.csv", "w") as f:
                 ff = csv.writer(f)
-                ff.writerow(["Type", "Mass", "Parts"])
+                ff.writerow(["Type", "Ion", "Mass", "Parts"])
                 for id, type, frag in tagged_frags:
                     mass = bg.monoisotopic_mass_calculator(fragments, [id])[0][0]
-                    ff.writerow([type, mass, pretty_print_nodes(frag)])
+                    ff.writerow(
+                        [type, mass + mods["Proton"], mass, pretty_print_nodes(frag)]
+                    )
