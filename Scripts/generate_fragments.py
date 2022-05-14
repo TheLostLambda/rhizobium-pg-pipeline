@@ -27,6 +27,7 @@ if __name__ == "__main__":
             parent = node_file.parent
             structure_name = node_file.name.removesuffix(" NL.csv")
             edge_file = parent / (structure_name + " EL.csv")
+            print(f"Fragmenting {structure_name}...")
             hf = Helper_Funcs(node_file, edge_file)
             masses = hf.generate_dict(MASSES)
             mods = hf.generate_dict(MODS)
