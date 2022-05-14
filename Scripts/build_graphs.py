@@ -6,7 +6,7 @@ import re
 
 class Node:
     # Some helpful mappings
-    chain_abbr = {"G": "GlcNAc", "M": "MurNAc_alditol"}
+    chain_abbr = {"g": "GlcNAc", "m": "MurNAc_alditol"}
     stem_abbr = {"J": "mDAP"}
     # A shared, class-wide counter
     id_counter = 0
