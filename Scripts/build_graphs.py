@@ -166,8 +166,11 @@ class Dimer:
             self.monomers[1].chain[0].mod = "negHOxy"
         else:
             # Otherwise, split into crosslinked sets of monomers
-            self.monomers = {type: monos for type in Dimer.crosslinks
-                             if (monos := self.crosslink(type, monomers))}
+            self.monomers = {
+                type: monos
+                for type in Dimer.crosslinks
+                if (monos := self.crosslink(type, monomers))
+            }
 
     def __repr__(self):
         return self.structure
@@ -183,9 +186,11 @@ class Dimer:
         # Get monomer stem lengths
         a_len, d_len = (len(acceptor.flat_stem()), len(donor.flat_stem()))
         # Check for illegal crosslinking combinations
-        if type == "3-3" and min(a_len, d_len) != 3:
-            return None
-        if type == "3-4" and (a_len < 3 or d_len != 4):
+        if (
+            a_len < 3
+            or (type == "3-3" and d_len != 3)
+            or (type == "3-4" and (d_len != 4 or donor.stem[-1][-1].residue != "A"))
+        ):
             return None
         # In both types, a hydrogen is lost from residue 3 of the acceptor stem
         if acceptor.stem[0][2].mod == "Hydroxy":
@@ -212,8 +217,10 @@ class Dimer:
             return {self.structure: Dimer.splice(self.monomers, "nodes")}
         else:
             # Otherwise, return different node lists for the crosslinking types
-            return {f"{self.structure} ({type})": Dimer.splice(monos, "nodes")
-                    for type, monos in self.monomers.items()}
+            return {
+                f"{self.structure} ({type})": Dimer.splice(monos, "nodes")
+                for type, monos in self.monomers.items()
+            }
 
     def edges(self):
         # If the bond is glycosidic
@@ -227,8 +234,10 @@ class Dimer:
             return {self.structure: edges}
         else:
             # Otherwise, create two different edge lists for 3-3 and 3-4 bonds
-            edges = {type: Dimer.splice(monos, "edges")
-                     for type, monos in self.monomers.items()}
+            edges = {
+                type: Dimer.splice(monos, "edges")
+                for type, monos in self.monomers.items()
+            }
             # Add a 3-3 peptide bond if possible
             if "3-3" in edges:
                 acceptor, donor = self.monomers["3-3"]
@@ -240,8 +249,9 @@ class Dimer:
                 bond = Edge(donor.stem[-1][-1].id, acceptor.stem[0][2].id, 2)
                 edges["3-4"].append(bond)
             # Return the named edge lists
-            return {f"{self.structure} ({type})": edges
-                    for type, edges in edges.items()}
+            return {
+                f"{self.structure} ({type})": edges for type, edges in edges.items()
+            }
 
     @staticmethod
     def splice(monomers, getter):
@@ -274,17 +284,20 @@ def load_structures(ms1_file):
 
 def parse_structures(ms1):
     # Return generated graphs for every MS1 structure
-    structs = [[Dimer(s), Dimer(s, flipped=True)] if Dimer.sep_re.search(s) else [Monomer(s)] for s in ms1]
+    structs = [
+        [Dimer(s), Dimer(s, flipped=True)] if Dimer.sep_re.search(s) else [Monomer(s)]
+        for s in ms1
+    ]
     # Flatten the nested lists
     return sum(structs, [])
 
 
 if __name__ == "__main__":
     # Extract the MS1 input filepath and graph output path from the arguments
-    ms1_file=sys.argv[1]
-    out_dir=sys.argv[2]
+    ms1_file = sys.argv[1]
+    out_dir = sys.argv[2]
     # Load the MS1 structures from CSV
-    mols=load_structures(ms1_file)
+    mols = load_structures(ms1_file)
     # Write graphs for every MS1 structure
     for mol in mols:
         write_graphs(mol, out_dir)
